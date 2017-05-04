@@ -5,10 +5,19 @@ A modern, low-cost universal controller for ionization vacuum gauges.
 
 ![Prototype picture](https://raw.githubusercontent.com/m-labs/ionpak/master/proto_rev1_small.jpg)
 
+Building and loading the firmware
+---------------------------------
+
+```sh
+openocd -f support/openocd.cfg
+xargo build --release
+arm-none-eabi-gdb -x support/load.gdb target/thumbv7em-none-eabihf/release/ionpak-firmware
+```
+
 Flyback transformer construction
 --------------------------------
 
-TR300: Use EPCOS coilformer B66208X1010T1. Wind 5 turns on the primary and spread them across the length of the coilformer - it is important that the air gap between the cores is covered by windings. Wind 70 turns on the secondary in multiple layers. As with all flyback transformers, the polarity of the windings is critical. Assemble with EPCOS cores B66317G500X127 and B66317GX127 (one half gapped core, one half ungapped core), and corresponding clips.
+TR300: Use EPCOS coilformer B66208X1010T1. Wind 5 turns on the primary and spread them across the length of the coilformer - it is particularly important that the air gap between the cores is covered by windings. Wind 70 turns on the secondary in multiple layers. As with all flyback transformers, the polarity of the windings is critical. Assemble with EPCOS cores B66317G500X127 and B66317GX127 (one half gapped core, one half ungapped core), and corresponding clips.
 
 TR350: Use EPCOS coilformer B66206W1110T1 and cores B66311G250X127 and B66311GX127. Both the primary and the secondary have 5 turns and must be wound together, interleaving the windings. The same remarks as for TR300 apply.
 
