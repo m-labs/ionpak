@@ -119,6 +119,7 @@ fn main() {
 
         set_hv_pwm(PWM_LOAD/64);
         set_fv_pwm(PWM_LOAD/16);
+        set_fbv_pwm(PWM_LOAD/8);
     });
 }
 
