@@ -38,3 +38,4 @@ PCB rev 1:
 * R214 -> 4.7k
 * LM339PT is in TSSOP package. Change for SOIC P/N
 * GDT200 minimum firing voltage is too low
+* the relay model should be changed to 9001-05-00. 9001-05-02 is an undocumented normally closed variant.
