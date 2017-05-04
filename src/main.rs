@@ -51,6 +51,26 @@ fn set_fbv_pwm(duty: u16) {
     });
 }
 
+enum EmissionRange {
+    Low,  // 22K
+    Med,  // 22K//(200Ω + compensated diode)
+    High  // 22K//(39Ω + uncompensated diode)
+}
+
+fn set_emission_range(range: EmissionRange) {
+    cortex_m::interrupt::free(|cs| {
+        let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
+        gpio_p.data.modify(|r, w| {
+            let value = r.data().bits() & 0b100111;
+            match range {
+                EmissionRange::Low  => w.data().bits(value | 0b000000),
+                EmissionRange::Med  => w.data().bits(value | 0b001000),
+                EmissionRange::High => w.data().bits(value | 0b010000),
+            }
+        });
+    });
+}
+
 fn main() {
     hprintln!("Hello, world!");
 
@@ -63,11 +83,12 @@ fn main() {
         systick.enable_counter();
         systick.enable_interrupt();
 
-        // Bring up GPIO ports F, G, K
+        // Bring up GPIO ports F, G, K, P
         sysctl.rcgcgpio.modify(|_, w| {
             w.r5().bit(true)
              .r6().bit(true)
              .r9().bit(true)
+             .r13().bit(true)
         });
         while !sysctl.prgpio.read().r5().bit() {}
         while !sysctl.prgpio.read().r6().bit() {}
@@ -77,6 +98,11 @@ fn main() {
         let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
         gpio_k.dir.write(|w| w.dir().bits(LED1|LED2));
         gpio_k.den.write(|w| w.den().bits(LED1|LED2));
+
+        // Set up gain and emission range control pins
+        let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
+        gpio_p.dir.write(|w| w.dir().bits(0b111111));
+        gpio_p.den.write(|w| w.den().bits(0b111111));
 
         // Set up PWMs
         let gpio_f = tm4c129x::GPIO_PORTF_AHB.borrow(cs);
@@ -117,6 +143,7 @@ fn main() {
              .pwm4en().bit(true)
         });
 
+        set_emission_range(EmissionRange::Med);
         set_hv_pwm(PWM_LOAD/64);
         set_fv_pwm(PWM_LOAD/16);
         set_fbv_pwm(PWM_LOAD/8);
