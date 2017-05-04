@@ -29,12 +29,18 @@ fn set_led(nr: u8, state: bool) {
     });
 }
 
-fn set_fv_pwm(duty: u8) {
-
+fn set_hv_pwm(duty: u32) {
+    cortex_m::interrupt::free(|cs| {
+        let pwm0 = tm4c129x::PWM0.borrow(cs);
+        pwm0._0_cmpa.write(|w| unsafe { w.bits(duty) });
+    });
 }
 
-fn set_hv_pwm(duty: u8) {
-
+fn set_fv_pwm(duty: u32) {
+    cortex_m::interrupt::free(|cs| {
+        let pwm0 = tm4c129x::PWM0.borrow(cs);
+        pwm0._1_cmpa.write(|w| unsafe { w.bits(duty) });
+    });
 }
 
 fn main() {
@@ -71,15 +77,20 @@ fn main() {
         while !sysctl.prpwm.read().r0().bit() {}
 
         let pwm0 = tm4c129x::PWM0.borrow(cs);
+        // HV_PWM
         pwm0._0_gena.write(|w| w.actload().zero().actcmpad().one());
         pwm0._0_load.write(|w| unsafe { w.bits(PWM_LOAD) });
-        pwm0._0_cmpa.write(|w| unsafe { w.bits(PWM_LOAD / 64) });
+        pwm0._0_cmpa.write(|w| unsafe { w.bits(0) });
         pwm0._0_ctl.write(|w| w.enable().bit(true));
+        // FV_PWM
         pwm0._1_gena.write(|w| w.actload().zero().actcmpad().one());
         pwm0._1_load.write(|w| unsafe { w.bits(PWM_LOAD) });
-        pwm0._1_cmpa.write(|w| unsafe { w.bits(PWM_LOAD / 32) });
+        pwm0._1_cmpa.write(|w| unsafe { w.bits(0) });
         pwm0._1_ctl.write(|w| w.enable().bit(true));
         pwm0.enable.write(|w| w.pwm0en().bit(true).pwm2en().bit(true));
+
+        set_hv_pwm(PWM_LOAD/64);
+        set_fv_pwm(PWM_LOAD/16);
     });
 }
 
