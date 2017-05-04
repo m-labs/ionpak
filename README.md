@@ -37,3 +37,4 @@ PCB rev 1:
 * add clamp diodes to GND on op-amp outputs to ADC when op-amp has negative supply
 * R214 -> 4.7k
 * LM339PT is in TSSOP package. Change for SOIC P/N
+* GDT200 minimum firing voltage is too low
