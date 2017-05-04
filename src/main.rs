@@ -15,8 +15,9 @@ const LED1: u8 = 0x10;
 const LED2: u8 = 0x40;
 const HV_PWM: u8 = 0x01;
 const FV_PWM: u8 = 0x04;
+const FBV_PWM: u8 = 0x01;
 
-const PWM_LOAD: u32 = /*pwmclk*/16_000_000 / /*freq*/100_000;
+const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
 
 fn set_led(nr: u8, state: bool) {
     cortex_m::interrupt::free(|cs| {
@@ -29,17 +30,24 @@ fn set_led(nr: u8, state: bool) {
     });
 }
 
-fn set_hv_pwm(duty: u32) {
+fn set_hv_pwm(duty: u16) {
     cortex_m::interrupt::free(|cs| {
         let pwm0 = tm4c129x::PWM0.borrow(cs);
-        pwm0._0_cmpa.write(|w| unsafe { w.bits(duty) });
+        pwm0._0_cmpa.write(|w| w.compa().bits(duty));
     });
 }
 
-fn set_fv_pwm(duty: u32) {
+fn set_fv_pwm(duty: u16) {
     cortex_m::interrupt::free(|cs| {
         let pwm0 = tm4c129x::PWM0.borrow(cs);
-        pwm0._1_cmpa.write(|w| unsafe { w.bits(duty) });
+        pwm0._1_cmpa.write(|w| w.compa().bits(duty));
+    });
+}
+
+fn set_fbv_pwm(duty: u16) {
+    cortex_m::interrupt::free(|cs| {
+        let pwm0 = tm4c129x::PWM0.borrow(cs);
+        pwm0._2_cmpa.write(|w| w.compa().bits(duty));
     });
 }
 
@@ -55,10 +63,14 @@ fn main() {
         systick.enable_counter();
         systick.enable_interrupt();
 
-        // Bring up GPIO port F and K
-        sysctl.rcgcgpio.modify(|_, w| w.r5().bit(true));
+        // Bring up GPIO ports F, G, K
+        sysctl.rcgcgpio.modify(|_, w| {
+            w.r5().bit(true)
+             .r6().bit(true)
+             .r9().bit(true)
+        });
         while !sysctl.prgpio.read().r5().bit() {}
-        sysctl.rcgcgpio.modify(|_, w| w.r9().bit(true));
+        while !sysctl.prgpio.read().r6().bit() {}
         while !sysctl.prgpio.read().r9().bit() {}
 
         // Set up LEDs
@@ -73,21 +85,37 @@ fn main() {
         gpio_f.afsel.write(|w| w.afsel().bits(HV_PWM|FV_PWM));
         gpio_f.pctl.write(|w| unsafe { w.pmc0().bits(6).pmc2().bits(6) });
 
+        let gpio_g = tm4c129x::GPIO_PORTG_AHB.borrow(cs);
+        gpio_g.dir.write(|w| w.dir().bits(FBV_PWM));
+        gpio_g.den.write(|w| w.den().bits(FBV_PWM));
+        gpio_g.afsel.write(|w| w.afsel().bits(FBV_PWM));
+        gpio_g.pctl.write(|w| unsafe { w.pmc0().bits(6) });
+
         sysctl.rcgcpwm.modify(|_, w| w.r0().bit(true));
         while !sysctl.prpwm.read().r0().bit() {}
 
         let pwm0 = tm4c129x::PWM0.borrow(cs);
         // HV_PWM
         pwm0._0_gena.write(|w| w.actload().zero().actcmpad().one());
-        pwm0._0_load.write(|w| unsafe { w.bits(PWM_LOAD) });
-        pwm0._0_cmpa.write(|w| unsafe { w.bits(0) });
+        pwm0._0_load.write(|w| w.load().bits(PWM_LOAD));
+        pwm0._0_cmpa.write(|w| w.compa().bits(0));
         pwm0._0_ctl.write(|w| w.enable().bit(true));
         // FV_PWM
         pwm0._1_gena.write(|w| w.actload().zero().actcmpad().one());
-        pwm0._1_load.write(|w| unsafe { w.bits(PWM_LOAD) });
-        pwm0._1_cmpa.write(|w| unsafe { w.bits(0) });
+        pwm0._1_load.write(|w| w.load().bits(PWM_LOAD));
+        pwm0._1_cmpa.write(|w| w.compa().bits(0));
         pwm0._1_ctl.write(|w| w.enable().bit(true));
-        pwm0.enable.write(|w| w.pwm0en().bit(true).pwm2en().bit(true));
+        // FBV_PWM
+        pwm0._2_gena.write(|w| w.actload().zero().actcmpad().one());
+        pwm0._2_load.write(|w| w.load().bits(PWM_LOAD));
+        pwm0._2_cmpa.write(|w| w.compa().bits(0));
+        pwm0._2_ctl.write(|w| w.enable().bit(true));
+        // Enable all at once
+        pwm0.enable.write(|w| {
+            w.pwm0en().bit(true)
+             .pwm2en().bit(true)
+             .pwm4en().bit(true)
+        });
 
         set_hv_pwm(PWM_LOAD/64);
         set_fv_pwm(PWM_LOAD/16);
@@ -123,4 +151,3 @@ pub static EXCEPTIONS: ExceptionHandlers = ExceptionHandlers {
 pub static INTERRUPTS: InterruptHandlers = InterruptHandlers {
     ..tm4c129x::interrupt::DEFAULT_HANDLERS
 };
- 
