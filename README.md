@@ -3,7 +3,7 @@ ionpak
 
 A modern, low-cost universal controller for ionization vacuum gauges.
 
-![Prototype picture](https://raw.githubusercontent.com/m-labs/ionpak/master/proto_rev1_resized.jpg)
+![Prototype picture](https://raw.githubusercontent.com/m-labs/ionpak/master/proto_rev1_small.jpg)
 
 Flyback transformer construction
 --------------------------------
