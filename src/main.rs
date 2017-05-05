@@ -93,6 +93,7 @@ fn main() {
         while !sysctl.prgpio.read().r5().bit() {}
         while !sysctl.prgpio.read().r6().bit() {}
         while !sysctl.prgpio.read().r9().bit() {}
+        while !sysctl.prgpio.read().r13().bit() {}
 
         // Set up LEDs
         let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
