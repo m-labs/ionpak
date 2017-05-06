@@ -121,6 +121,7 @@ fn error_reset() {
 
 
 fn main() {
+    cortex_m::interrupt::enable();
     cortex_m::interrupt::free(|cs| {
         let sysctl = tm4c129x::SYSCTL.borrow(cs);
         let nvic = tm4c129x::NVIC.borrow(cs);
@@ -254,6 +255,7 @@ fn main() {
         timer0.cfg.write(|w| w.cfg()._32_bit_timer());
         timer0.tamr.write(|w| w.tamr().period());
         timer0.tailr.write(|w| unsafe { w.bits(ADC_TIMER_LOAD) });
+        timer0.ctl.write(|w| w.taote().bit(true));
         timer0.adcev.write(|w| w.tatoadcen().bit(true));
         timer0.cc.write(|w| w.altclk().bit(true));
         timer0.ctl.write(|w| w.taen().bit(true));
@@ -311,6 +313,7 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
         if adc0.ostat.read().ov0().bit() {
             panic!("ADC FIFO overflowed")
         }
+        adc0.isc.write(|w| w.in0().bit(true));
 
         let _ic_sample  = adc0.ssfifo0.read().data().bits();
         let _fbi_sample = adc0.ssfifo0.read().data().bits();
