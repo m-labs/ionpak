@@ -1,6 +1,3 @@
-use core::f32;
-use core::num::Float;
-
 #[derive(Clone, Copy)]
 pub struct Parameters {
     pub kp: f32,
@@ -16,7 +13,7 @@ pub struct Controller {
     parameters: Parameters,
     target: f32,
     integral: f32,
-    last_input: f32
+    last_input: Option<f32>
 }
 
 impl Controller {
@@ -24,7 +21,7 @@ impl Controller {
         Controller {
             parameters: parameters,
             target: 0.0,
-            last_input: f32::NAN,
+            last_input: None,
             integral: 0.0
         }
     }
@@ -43,12 +40,11 @@ impl Controller {
         }
         let i = self.parameters.ki * self.integral;
 
-        let d = if self.last_input.is_nan() {
-            0.0
-        } else {
-            self.parameters.kd * (self.last_input - input)
+        let d = match self.last_input {
+            None => 0.0,
+            Some(last_input) => self.parameters.kd * (last_input - input)
         };
-        self.last_input = input;
+        self.last_input = Some(input);
 
         let mut output = p + i + d;
         if output < self.parameters.output_min {
@@ -67,6 +63,6 @@ impl Controller {
     #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.integral = 0.0;
-        self.last_input = f32::NAN;
+        self.last_input = None;
     }
 }

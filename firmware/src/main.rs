@@ -1,4 +1,4 @@
-#![feature(used, const_fn, core_float)]
+#![feature(used, const_fn)]
 #![no_std]
 
 #[macro_use]
