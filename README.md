@@ -42,3 +42,4 @@ PCB rev 1:
 * the relay model should be changed to 9001-05-00. 9001-05-02 is an undocumented normally closed variant.
 * D504 should follow the schematics in its datasheet
 * R502 should be connected to VCC
+* Do not connect anything to PE3 as uC errata causes glitches on it during sampling
