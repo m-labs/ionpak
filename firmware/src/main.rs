@@ -1,4 +1,4 @@
-#![feature(used, const_fn)]
+#![feature(used, const_fn, core_float)]
 #![no_std]
 
 #[macro_use]
@@ -6,11 +6,29 @@ extern crate cortex_m;
 extern crate cortex_m_rt;
 extern crate tm4c129x;
 
-use core::cell::Cell;
+use core::cell::{Cell, RefCell};
 use cortex_m::ctxt::Local;
 use cortex_m::exception::Handlers as ExceptionHandlers;
+use cortex_m::interrupt::Mutex;
 use tm4c129x::interrupt::Interrupt;
 use tm4c129x::interrupt::Handlers as InterruptHandlers;
+
+mod pid;
+
+
+const HV_PID_PARAMETERS: pid::Parameters = pid::Parameters {
+    kp: 0.01,
+    ki: 0.005,
+    kd: 0.0,
+    output_min: 0.0,
+    output_max: 30.0,
+    integral_min: -5000.0,
+    integral_max: 5000.0
+};
+
+static HV_PID: Mutex<RefCell<pid::Controller>> = Mutex::new(RefCell::new(
+    pid::Controller::new(HV_PID_PARAMETERS)));
+
 
 const LED1: u8 = 0x10; // PF1
 const LED2: u8 = 0x40; // PF3
@@ -34,6 +52,7 @@ const AI_ERRN: u8 = 0x10;  // PL4
 
 const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
 const ADC_TIMER_LOAD: u32 = /*timerclk*/16_000_000 / /*freq*/100;
+
 
 fn set_led(nr: u8, state: bool) {
     cortex_m::interrupt::free(|cs| {
@@ -87,6 +106,7 @@ fn set_emission_range(range: EmissionRange) {
         });
     });
 }
+
 
 fn main() {
     cortex_m::interrupt::free(|cs| {
@@ -221,7 +241,7 @@ fn main() {
         timer0.ctl.write(|w| w.taen().bit(true));
 
         set_emission_range(EmissionRange::Med);
-        set_hv_pwm(PWM_LOAD/64);
+        HV_PID.borrow(cs).borrow_mut().set_target(200.0);
         set_fv_pwm(PWM_LOAD/16);
         set_fbv_pwm(PWM_LOAD/8);
     });
@@ -278,8 +298,11 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
         let _fbi_sample = adc0.ssfifo0.read().data().bits();
         let _fv_sample  = adc0.ssfifo0.read().data().bits();
         let _fd_sample  = adc0.ssfifo0.read().data().bits();
-        let _av_sample  = adc0.ssfifo0.read().data().bits();
+        let av_sample   = adc0.ssfifo0.read().data().bits();
         let _fbv_sample = adc0.ssfifo0.read().data().bits();
+
+        let mut hv_pid = HV_PID.borrow(cs).borrow_mut();
+        set_hv_pwm(hv_pid.update(av_sample as f32) as u16);
     })
 }
 
