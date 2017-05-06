@@ -44,11 +44,13 @@ const IC_ADC: u8 = 0x08;  // PE3
 const FBV_ADC: u8 = 0x20; // PD5
 const AV_ADC: u8 = 0x40;  // PD6
 
-const FV_ERRN: u8 = 0x01;  // PL0
-const FBV_ERRN: u8 = 0x02; // PL1
-const FBI_ERRN: u8 = 0x04; // PL2
-const AV_ERRN: u8 = 0x08;  // PL3
-const AI_ERRN: u8 = 0x10;  // PL4
+const FV_ERRN: u8 = 0x01;    // PL0
+const FBV_ERRN: u8 = 0x02;   // PL1
+const FBI_ERRN: u8 = 0x04;   // PL2
+const AV_ERRN: u8 = 0x08;    // PL3
+const AI_ERRN: u8 = 0x10;    // PL4
+const ERR_LATCHN: u8 = 0x20; // PL5
+const ERR_RESN: u8 = 0x01;   // PQ0
 
 const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
 const ADC_TIMER_LOAD: u32 = /*timerclk*/16_000_000 / /*freq*/100;
@@ -107,6 +109,16 @@ fn set_emission_range(range: EmissionRange) {
     });
 }
 
+fn error_reset() {
+    cortex_m::interrupt::free(|cs| {
+        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+        let gpio_q = tm4c129x::GPIO_PORTQ.borrow(cs);
+        gpio_q.data.modify(|r, w| w.data().bits(r.data().bits() & !ERR_RESN));
+        while gpio_l.data.read().bits() as u8 & ERR_LATCHN == 0 {}
+        gpio_q.data.modify(|r, w| w.data().bits(r.data().bits() | ERR_RESN));
+    });
+}
+
 
 fn main() {
     cortex_m::interrupt::free(|cs| {
@@ -119,7 +131,7 @@ fn main() {
         systick.enable_counter();
         systick.enable_interrupt();
 
-        // Bring up GPIO ports D, E, F, G, K, L, P
+        // Bring up GPIO ports D, E, F, G, K, L, P, Q
         sysctl.rcgcgpio.modify(|_, w| {
             w.r3().bit(true)
              .r4().bit(true)
@@ -128,6 +140,7 @@ fn main() {
              .r9().bit(true)
              .r10().bit(true)
              .r13().bit(true)
+             .r14().bit(true)
         });
         while !sysctl.prgpio.read().r3().bit() {}
         while !sysctl.prgpio.read().r4().bit() {}
@@ -136,6 +149,7 @@ fn main() {
         while !sysctl.prgpio.read().r9().bit() {}
         while !sysctl.prgpio.read().r10().bit() {}
         while !sysctl.prgpio.read().r13().bit() {}
+        while !sysctl.prgpio.read().r14().bit() {}
 
         // Set up LEDs
         let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
@@ -147,10 +161,14 @@ fn main() {
         gpio_p.dir.write(|w| w.dir().bits(0b111111));
         gpio_p.den.write(|w| w.den().bits(0b111111));
 
-        // Set up error input pins
+        // Set up error pins
         let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+        let gpio_q = tm4c129x::GPIO_PORTQ.borrow(cs);
         gpio_l.pur.write(|w| w.pue().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN));
-        gpio_l.den.write(|w| w.den().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN));
+        gpio_l.den.write(|w| w.den().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN|ERR_LATCHN));
+        gpio_q.dir.write(|w| w.dir().bits(ERR_RESN));
+        gpio_q.den.write(|w| w.den().bits(ERR_RESN));
+        error_reset();
 
         // Set up PWMs
         let gpio_f = tm4c129x::GPIO_PORTF_AHB.borrow(cs);
