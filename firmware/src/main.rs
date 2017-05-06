@@ -239,12 +239,12 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
             panic!("ADC FIFO overflowed")
         }
 
-        let _ic_sample  = adc0.ssfifo0.read().data();
-        let _fbi_sample = adc0.ssfifo0.read().data();
-        let _fv_sample  = adc0.ssfifo0.read().data();
-        let _fd_sample  = adc0.ssfifo0.read().data();
-        let _av_sample  = adc0.ssfifo0.read().data();
-        let _fbv_sample = adc0.ssfifo0.read().data();
+        let _ic_sample  = adc0.ssfifo0.read().data().bits();
+        let _fbi_sample = adc0.ssfifo0.read().data().bits();
+        let _fv_sample  = adc0.ssfifo0.read().data().bits();
+        let _fd_sample  = adc0.ssfifo0.read().data().bits();
+        let _av_sample  = adc0.ssfifo0.read().data().bits();
+        let _fbv_sample = adc0.ssfifo0.read().data().bits();
     })
 }
 
