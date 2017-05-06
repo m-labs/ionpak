@@ -40,3 +40,5 @@ PCB rev 1:
 * LM339PT is in TSSOP package. Change for SOIC P/N
 * GDT200 minimum firing voltage is too low
 * the relay model should be changed to 9001-05-00. 9001-05-02 is an undocumented normally closed variant.
+* D504 should follow the schematics in its datasheet
+* R502 should be connected to VCC
