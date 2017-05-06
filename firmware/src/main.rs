@@ -12,17 +12,19 @@ use cortex_m::exception::Handlers as ExceptionHandlers;
 use tm4c129x::interrupt::Interrupt;
 use tm4c129x::interrupt::Handlers as InterruptHandlers;
 
-const LED1: u8 = 0x10; //PF1
-const LED2: u8 = 0x40; //PF3
-const HV_PWM: u8 = 0x01; //PF0
-const FV_PWM: u8 = 0x04; //PF2
-const FBV_PWM: u8 = 0x01; //PD5
-const FD_ADC: u8 = 0x01; //PE0
-const FV_ADC: u8 = 0x02; //PE1
-const FBI_ADC: u8 = 0x04; //PE2
-const IC_ADC: u8 = 0x08; //PE3
-const FBV_ADC: u8 = 0x20; //PD5
-const AV_ADC: u8 = 0x40; //PD6
+const LED1: u8 = 0x10; // PF1
+const LED2: u8 = 0x40; // PF3
+
+const HV_PWM: u8 = 0x01;  // PF0
+const FV_PWM: u8 = 0x04;  // PF2
+const FBV_PWM: u8 = 0x01; // PD5
+
+const FD_ADC: u8 = 0x01;  // PE0
+const FV_ADC: u8 = 0x02;  // PE1
+const FBI_ADC: u8 = 0x04; // PE2
+const IC_ADC: u8 = 0x08;  // PE3
+const FBV_ADC: u8 = 0x20; // PD5
+const AV_ADC: u8 = 0x40;  // PD6
 
 const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
 const ADC_TIMER_LOAD: u32 = /*timerclk*/16_000_000 / /*freq*/100;
@@ -81,8 +83,6 @@ fn set_emission_range(range: EmissionRange) {
 }
 
 fn main() {
-    hprintln!("Hello, world!");
-
     cortex_m::interrupt::free(|cs| {
         let sysctl = tm4c129x::SYSCTL.borrow(cs);
         let nvic = tm4c129x::NVIC.borrow(cs);
@@ -176,12 +176,12 @@ fn main() {
         adc0.sac.write(|w| w.avg()._64x());
         adc0.ctl.write(|w| w.vref().bit(true));
         adc0.ssmux0.write(|w| {
-            w.mux0().bits(0) //IC_ADC
-             .mux1().bits(1) //FBI_ADC
-             .mux2().bits(2) //FV_ADC
-             .mux3().bits(3) //FD_ADC
-             .mux4().bits(5) //AV_ADC
-             .mux5().bits(6) //FBV_ADC
+            w.mux0().bits(0) // IC_ADC
+             .mux1().bits(1) // FBI_ADC
+             .mux2().bits(2) // FV_ADC
+             .mux3().bits(3) // FD_ADC
+             .mux4().bits(5) // AV_ADC
+             .mux5().bits(6) // FBV_ADC
         });
         adc0.ssctl0.write(|w| w.end5().bit(true));
         adc0.sstsh0.write(|w| {
