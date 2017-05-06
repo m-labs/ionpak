@@ -26,6 +26,12 @@ const IC_ADC: u8 = 0x08;  // PE3
 const FBV_ADC: u8 = 0x20; // PD5
 const AV_ADC: u8 = 0x40;  // PD6
 
+const FV_ERRN: u8 = 0x01;  // PL0
+const FBV_ERRN: u8 = 0x02; // PL1
+const FBI_ERRN: u8 = 0x04; // PL2
+const AV_ERRN: u8 = 0x08;  // PL3
+const AI_ERRN: u8 = 0x10;  // PL4
+
 const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
 const ADC_TIMER_LOAD: u32 = /*timerclk*/16_000_000 / /*freq*/100;
 
@@ -93,13 +99,14 @@ fn main() {
         systick.enable_counter();
         systick.enable_interrupt();
 
-        // Bring up GPIO ports D, E, F, G, K, P
+        // Bring up GPIO ports D, E, F, G, K, L, P
         sysctl.rcgcgpio.modify(|_, w| {
             w.r3().bit(true)
              .r4().bit(true)
              .r5().bit(true)
              .r6().bit(true)
              .r9().bit(true)
+             .r10().bit(true)
              .r13().bit(true)
         });
         while !sysctl.prgpio.read().r3().bit() {}
@@ -107,6 +114,7 @@ fn main() {
         while !sysctl.prgpio.read().r5().bit() {}
         while !sysctl.prgpio.read().r6().bit() {}
         while !sysctl.prgpio.read().r9().bit() {}
+        while !sysctl.prgpio.read().r10().bit() {}
         while !sysctl.prgpio.read().r13().bit() {}
 
         // Set up LEDs
@@ -118,6 +126,11 @@ fn main() {
         let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
         gpio_p.dir.write(|w| w.dir().bits(0b111111));
         gpio_p.den.write(|w| w.den().bits(0b111111));
+
+        // Set up error input pins
+        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+        gpio_l.pur.write(|w| w.pue().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN));
+        gpio_l.den.write(|w| w.den().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN));
 
         // Set up PWMs
         let gpio_f = tm4c129x::GPIO_PORTF_AHB.borrow(cs);
@@ -212,6 +225,28 @@ fn main() {
         set_fv_pwm(PWM_LOAD/16);
         set_fbv_pwm(PWM_LOAD/8);
     });
+
+    loop {
+        cortex_m::interrupt::free(|cs| {
+            let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+            let errors_n = gpio_l.data.read().bits() as u8;
+            if errors_n & FV_ERRN == 0 {
+                hprintln!("Filament overvolt");
+            }
+            if errors_n & FBV_ERRN == 0 {
+                hprintln!("Filament bias overvolt");
+            }
+            if errors_n & FBI_ERRN == 0 {
+                hprintln!("Filament bias overcurrent");
+            }
+            if errors_n & AV_ERRN == 0 {
+                hprintln!("Anode overvolt");
+            }
+            if errors_n & AI_ERRN == 0 {
+                hprintln!("Anode overcurrent");
+            }
+        });
+    }
 }
 
 
