@@ -126,6 +126,10 @@ fn main() {
         let sysctl = tm4c129x::SYSCTL.borrow(cs);
         let nvic = tm4c129x::NVIC.borrow(cs);
 
+        // Enable FPU
+        let scb = tm4c129x::SCB.borrow(cs);
+        scb.enable_fpu();
+
         // Set up main oscillator
         sysctl.moscctl.write(|w| w.noxtal().bit(false));
         sysctl.moscctl.modify(|_, w| w.pwrdn().bit(false).oscrng().bit(true));

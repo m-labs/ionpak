@@ -13,4 +13,4 @@ lto = true
 debug = true
 
 [replace]
-"cortex-m:0.2.4" = { git = "https://github.com/whitequark/cortex-m", rev = "impl-syst" }
+"cortex-m:0.2.4" = { git = "https://github.com/whitequark/cortex-m", rev = "fpu-cpacr" }
