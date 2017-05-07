@@ -43,7 +43,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "tm4c129x"
 version = "0.4.0"
-source = "git+https://github.com/m-labs/dslite2svd#f1b9a75e478c2186bf963ae1f868109fd14def29"
+source = "git+https://github.com/m-labs/dslite2svd#43d3964bb9dcebe631b0bdf1c2fdc975cf53c41c"
 dependencies = [
  "cortex-m 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "vcell 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",

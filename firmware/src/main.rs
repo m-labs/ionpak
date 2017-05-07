@@ -126,6 +126,16 @@ fn main() {
         let sysctl = tm4c129x::SYSCTL.borrow(cs);
         let nvic = tm4c129x::NVIC.borrow(cs);
 
+        // Set up main oscillator
+        sysctl.moscctl.write(|w| w.noxtal().bit(false));
+        sysctl.moscctl.modify(|_, w| w.pwrdn().bit(false).oscrng().bit(true));
+
+        // Set up PLL with fVCO=320 MHz
+        sysctl.pllfreq1.write(|w| w.q().bits(0).n().bits(4));
+        sysctl.pllfreq0.write(|w| w.mint().bits(64).pllpwr().bit(true));
+        sysctl.rsclkcfg.modify(|_, w| w.pllsrc().mosc().newfreq().bit(true));
+        while !sysctl.pllstat.read().lock().bit() {}
+
         // Set up system timer
         let systick = tm4c129x::SYST.borrow(cs);
         systick.set_reload(systick.get_ticks_per_10ms());
