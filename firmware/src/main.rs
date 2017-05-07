@@ -232,11 +232,10 @@ fn main() {
         while !sysctl.pradc.read().r0().bit() {}
 
         let adc0 = tm4c129x::ADC0.borrow(cs);
-        adc0.actss.write(|w| w.asen0().bit(true));
+        // Due to silicon erratum, this HAS to use PLL. PIOSC is not a suitable source.
+        adc0.cc.write(|w| w.cs().syspll().clkdiv().bits(16));
         adc0.im.write(|w| w.mask0().bit(true));
         adc0.emux.write(|w| w.em0().timer());
-        adc0.sac.write(|w| w.avg()._64x());
-        adc0.ctl.write(|w| w.vref().bit(true));
         adc0.ssmux0.write(|w| {
             w.mux0().bits(0) // IC_ADC
              .mux1().bits(1) // FBI_ADC
@@ -245,7 +244,7 @@ fn main() {
              .mux4().bits(5) // AV_ADC
              .mux5().bits(6) // FBV_ADC
         });
-        adc0.ssctl0.write(|w| w.end5().bit(true));
+        adc0.ssctl0.write(|w| w.ie5().bit(true).end5().bit(true));
         adc0.sstsh0.write(|w| {
             w.tsh0()._256()
              .tsh1()._256()
@@ -254,6 +253,9 @@ fn main() {
              .tsh4()._256()
              .tsh5()._256()
         });
+        adc0.sac.write(|w| w.avg()._64x());
+        adc0.ctl.write(|w| w.vref().bit(true));
+        adc0.actss.write(|w| w.asen0().bit(true));
 
         nvic.enable(Interrupt::ADC0SS0);
 
@@ -268,7 +270,7 @@ fn main() {
         timer0.ctl.write(|w| w.taote().bit(true));
         timer0.adcev.write(|w| w.tatoadcen().bit(true));
         timer0.cc.write(|w| w.altclk().bit(true));
-        timer0.ctl.write(|w| w.taen().bit(true));
+        timer0.ctl.modify(|_, w| w.taen().bit(true));
 
         set_emission_range(EmissionRange::Med);
         HV_PID.borrow(cs).borrow_mut().set_target(200.0);
