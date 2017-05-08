@@ -53,7 +53,6 @@ const ERR_LATCHN: u8 = 0x20; // PL5
 const ERR_RESN: u8 = 0x01;   // PQ0
 
 const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
-const ADC_TIMER_LOAD: u32 = /*timerclk*/16_000_000 / /*freq*/100;
 
 
 fn set_led(nr: u8, state: bool) {
@@ -240,7 +239,7 @@ fn main() {
         // fADC=32 MHz
         adc0.cc.write(|w| w.cs().syspll().clkdiv().bits(10));
         adc0.im.write(|w| w.mask0().bit(true));
-        adc0.emux.write(|w| w.em0().timer());
+        adc0.emux.write(|w| w.em0().always());
         adc0.ssmux0.write(|w| {
             w.mux0().bits(0) // IC_ADC
              .mux1().bits(1) // FBI_ADC
@@ -264,18 +263,6 @@ fn main() {
 
         nvic.enable(Interrupt::ADC0SS0);
 
-        // Set up ADC timer
-        sysctl.rcgctimer.modify(|_, w| w.r0().bit(true));
-        while !sysctl.prtimer.read().r0().bit() {}
-
-        let timer0 = tm4c129x::TIMER0.borrow(cs);
-        timer0.cfg.write(|w| w.cfg()._32_bit_timer());
-        timer0.tamr.write(|w| w.tamr().period());
-        timer0.tailr.write(|w| unsafe { w.bits(ADC_TIMER_LOAD) });
-        timer0.ctl.write(|w| w.taote().bit(true));
-        timer0.adcev.write(|w| w.tatoadcen().bit(true));
-        timer0.cc.write(|w| w.altclk().bit(true));
-        timer0.ctl.modify(|_, w| w.taen().bit(true));
 
         set_emission_range(EmissionRange::Med);
         HV_PID.borrow(cs).borrow_mut().set_target(200.0);
