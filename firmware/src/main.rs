@@ -121,7 +121,7 @@ fn error_reset() {
 
 
 fn main() {
-    cortex_m::interrupt::enable();
+    unsafe { cortex_m::interrupt::enable(); }
     cortex_m::interrupt::free(|cs| {
         let sysctl = tm4c129x::SYSCTL.borrow(cs);
         let nvic = tm4c129x::NVIC.borrow(cs);
