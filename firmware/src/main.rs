@@ -17,7 +17,7 @@ mod pid;
 
 
 const HV_PID_PARAMETERS: pid::Parameters = pid::Parameters {
-    kp: 0.003,
+    kp: 0.004,
     ki: 0.002,
     kd: 0.0,
     output_min: 0.0,
@@ -250,12 +250,12 @@ fn main() {
         });
         adc0.ssctl0.write(|w| w.ie5().bit(true).end5().bit(true));
         adc0.sstsh0.write(|w| {
-            w.tsh0()._256()
-             .tsh1()._256()
-             .tsh2()._256()
-             .tsh3()._256()
-             .tsh4()._256()
-             .tsh5()._256()
+            w.tsh0()._4()
+             .tsh1()._4()
+             .tsh2()._4()
+             .tsh3()._4()
+             .tsh4()._4()
+             .tsh5()._4()
         });
         adc0.sac.write(|w| w.avg()._64x());
         adc0.ctl.write(|w| w.vref().bit(true));
