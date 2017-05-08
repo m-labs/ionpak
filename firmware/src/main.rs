@@ -237,7 +237,8 @@ fn main() {
 
         let adc0 = tm4c129x::ADC0.borrow(cs);
         // Due to silicon erratum, this HAS to use PLL. PIOSC is not a suitable source.
-        adc0.cc.write(|w| w.cs().syspll().clkdiv().bits(16));
+        // fADC=32 MHz
+        adc0.cc.write(|w| w.cs().syspll().clkdiv().bits(10));
         adc0.im.write(|w| w.mask0().bit(true));
         adc0.emux.write(|w| w.em0().timer());
         adc0.ssmux0.write(|w| {
