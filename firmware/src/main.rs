@@ -17,8 +17,8 @@ mod pid;
 
 
 const HV_PID_PARAMETERS: pid::Parameters = pid::Parameters {
-    kp: 0.01,
-    ki: 0.005,
+    kp: 0.003,
+    ki: 0.002,
     kd: 0.0,
     output_min: 0.0,
     output_max: 30.0,
