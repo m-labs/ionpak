@@ -68,11 +68,14 @@ fn main() {
         let nvic = tm4c129x::NVIC.borrow(cs);
         nvic.enable(Interrupt::ADC0SS0);
 
-        board::set_emission_range(board::EmissionRange::High);
-        let bias = 15.0;
-        LOOP_ANODE.borrow(cs).borrow_mut().set_target(70.0+bias);
-        LOOP_CATHODE.borrow(cs).borrow_mut().set_bias_target(bias);
-        //board::set_fv_pwm(10);
+        let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
+        let mut loop_cathode = LOOP_CATHODE.borrow(cs).borrow_mut();
+        let anode_cathode = 60.0;
+        let cathode_bias = 12.0;
+        loop_anode.set_target(anode_cathode+cathode_bias);
+        loop_cathode.set_emission_target(anode_cathode/10000.0);
+        loop_cathode.set_bias_target(cathode_bias);
+        board::set_fv_pwm(10);
     });
 
     println!("ready");
@@ -115,7 +118,10 @@ extern fn adc0_ss0(ctxt: ADC0SS0) {
             board::set_led(1, false);
             board::set_led(2, true);
         }
-    })
+        if elapsed.get() == 1000 {
+            loop_cathode.ready();
+        }
+    });
 }
 
 #[used]

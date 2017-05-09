@@ -14,9 +14,14 @@ const PID_PARAMETERS: pid::Parameters = pid::Parameters {
 };
 
 pub struct Controller {
+    fbi_target: f32,
+    fbi_range: board::EmissionRange,
+    last_fbi: Option<f32>,
     pid: pid::Controller,
-    fbv_target: f32,
+
     last_fv: Option<f32>,
+
+    fbv_target: f32,
     last_fbv: Option<f32>
 }
 
@@ -24,16 +29,46 @@ pub struct Controller {
 impl Controller {
     pub const fn new() -> Controller {
         Controller {
+            fbi_target: 0.0,
+            fbi_range: board::EmissionRange::Low,
+            last_fbi: None,
             pid: pid::Controller::new(PID_PARAMETERS),
-            fbv_target: 0.0,
+
             last_fv: None,
+
+            fbv_target: 0.0,
             last_fbv: None,
         }
     }
 
-    pub fn adc_input(&mut self, _fbi_sample: u16, _fd_sample: u16, fv_sample: u16, fbv_sample: u16) {
-        self.last_fbv = Some(fbv_sample as f32/board::FBV_ADC_GAIN);
+    pub fn adc_input(&mut self, fbi_sample: u16, fd_sample: u16, fv_sample: u16, fbv_sample: u16) {
+        let fbi_voltage = ((fbi_sample as f32) - board::FBI_ADC_OFFSET)/board::FBI_ADC_GAIN;
+        let fbi_r225 = fbi_voltage/board::FBI_R225;
+        self.last_fbi = Some(match self.fbi_range {
+            board::EmissionRange::Low => fbi_r225,
+            board::EmissionRange::Med => {
+                let fd_voltage = ((fd_sample as f32) - board::FD_ADC_OFFSET)/board::FD_ADC_GAIN;
+                fbi_r225 + (fbi_voltage - fd_voltage)/board::FBI_R223
+            },
+            board::EmissionRange::High => {
+                let fd_voltage = 0.9;
+                fbi_r225 + (fbi_voltage - fd_voltage)/board::FBI_R224
+            }
+        });
         self.last_fv = Some(fv_sample as f32/board::FV_ADC_GAIN);
+        self.last_fbv = Some(fbv_sample as f32/board::FBV_ADC_GAIN);
+    }
+
+    pub fn set_emission_target(&mut self, amperes: f32) {
+        self.fbi_target = amperes;
+        self.fbi_range = board::EmissionRange::Low;
+        if amperes > 120e-6 {
+            self.fbi_range = board::EmissionRange::Med;
+        }
+        if amperes > 8e-3 {
+            self.fbi_range = board::EmissionRange::High;
+        }
+        board::set_emission_range(self.fbi_range);
     }
 
     pub fn set_bias_target(&mut self, volts: f32) {
@@ -53,6 +88,9 @@ impl Controller {
     }
 
     pub fn ready(&self) -> bool {
+        hprintln!("emission current: {}mA", 1000.0*self.last_fbi.unwrap());
+        hprintln!("filament voltage: {}V", self.last_fv.unwrap());
+        hprintln!("bias voltage: {}V", self.last_fbv.unwrap());
         self.emission_ready() & self.bias_ready()
     }
 }
