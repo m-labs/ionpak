@@ -63,7 +63,7 @@ impl Controller {
     }
 
     #[allow(dead_code)]
-    pub fn is_within(&mut self, tolerance: f32) -> bool {
+    pub fn is_within(&self, tolerance: f32) -> bool {
         match self.last_input {
             None => false,
             Some(last_input) => (last_input - self.target).abs() < tolerance
