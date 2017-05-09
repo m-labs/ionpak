@@ -30,6 +30,9 @@ const UART_DIV_16P6: u32 = /*altclk*/16_000_000 * (1 << /*len(divfrac)*/6) /
 
 
 pub const AV_ADC_GAIN: f32 = 6.792703150912105;
+pub const FV_ADC_GAIN: f32 = 501.83449105726623;
+pub const FBV_ADC_GAIN: f32 = 49.13796058269066;
+pub const FBV_PWM_GAIN: f32 = 0.5730803571428571;
 
 
 pub fn set_led(nr: u8, state: bool) {

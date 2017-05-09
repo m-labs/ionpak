@@ -69,9 +69,10 @@ fn main() {
         nvic.enable(Interrupt::ADC0SS0);
 
         board::set_emission_range(board::EmissionRange::High);
-        LOOP_ANODE.borrow(cs).borrow_mut().set_target(30.0+12.0);
-        //set_fv_pwm(10);
-        board::set_fbv_pwm(20);
+        let bias = 15.0;
+        LOOP_ANODE.borrow(cs).borrow_mut().set_target(70.0+bias);
+        LOOP_CATHODE.borrow(cs).borrow_mut().set_bias_target(bias);
+        //board::set_fv_pwm(10);
     });
 
     println!("ready");
