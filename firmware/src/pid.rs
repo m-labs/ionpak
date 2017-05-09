@@ -1,3 +1,5 @@
+use core::num::Float;
+
 #[derive(Clone, Copy)]
 pub struct Parameters {
     pub kp: f32,
@@ -58,6 +60,14 @@ impl Controller {
 
     pub fn set_target(&mut self, target: f32) {
         self.target = target
+    }
+
+    #[allow(dead_code)]
+    pub fn is_within(&mut self, tolerance: f32) -> bool {
+        match self.last_input {
+            None => false,
+            Some(last_input) => (last_input - self.target).abs() < tolerance
+        }
     }
 
     #[allow(dead_code)]
