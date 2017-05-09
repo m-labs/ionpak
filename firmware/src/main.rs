@@ -106,6 +106,7 @@ extern fn adc0_ss0(ctxt: ADC0SS0) {
         loop_anode.adc_input(av_sample);
         loop_cathode.adc_input(fbi_sample, fd_sample, fv_sample, fbv_sample);
 
+        elapsed.set(elapsed.get() + 1);
         if elapsed.get() % 100 == 0 {
             board::set_led(1, true);
             board::set_led(2, false);
