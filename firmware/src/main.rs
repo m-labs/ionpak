@@ -7,6 +7,7 @@ extern crate cortex_m_rt;
 extern crate tm4c129x;
 
 use core::cell::{Cell, RefCell};
+use core::fmt;
 use cortex_m::ctxt::Local;
 use cortex_m::exception::Handlers as ExceptionHandlers;
 use cortex_m::interrupt::Mutex;
@@ -53,6 +54,39 @@ const ERR_LATCHN: u8 = 0x20; // PL5
 const ERR_RESN: u8 = 0x01;   // PQ0
 
 const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
+
+const UART_DIV_16P6: u32 = /*altclk*/16_000_000 * (1 << /*len(divfrac)*/6) /
+                           (/*clkdiv*/16 * /*baud*/115200);
+
+
+pub struct UART0;
+
+impl fmt::Write for UART0 {
+    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        for c in s.bytes() {
+            unsafe {
+                let uart_0 = tm4c129x::UART0.get();
+                while (*uart_0).fr.read().txff().bit() {}
+                (*uart_0).dr.write(|w| w.data().bits(c))
+            }
+        }
+        Ok(())
+    }
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        use core::fmt::Write;
+        write!($crate::UART0, $($arg)*).unwrap()
+    })
+}
+
+#[macro_export]
+macro_rules! println {
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
 
 
 fn set_led(nr: u8, state: bool) {
@@ -120,7 +154,6 @@ fn error_reset() {
 
 
 fn main() {
-    unsafe { cortex_m::interrupt::enable(); }
     cortex_m::interrupt::free(|cs| {
         let sysctl = tm4c129x::SYSCTL.borrow(cs);
         let nvic = tm4c129x::NVIC.borrow(cs);
@@ -145,9 +178,10 @@ fn main() {
         systick.enable_counter();
         systick.enable_interrupt();
 
-        // Bring up GPIO ports D, E, F, G, K, L, P, Q
+        // Bring up GPIO ports A, D, E, F, G, K, L, P, Q
         sysctl.rcgcgpio.modify(|_, w| {
-            w.r3().bit(true)
+            w.r0().bit(true)
+             .r3().bit(true)
              .r4().bit(true)
              .r5().bit(true)
              .r6().bit(true)
@@ -156,6 +190,7 @@ fn main() {
              .r13().bit(true)
              .r14().bit(true)
         });
+        while !sysctl.prgpio.read().r0().bit() {}
         while !sysctl.prgpio.read().r3().bit() {}
         while !sysctl.prgpio.read().r4().bit() {}
         while !sysctl.prgpio.read().r5().bit() {}
@@ -164,6 +199,23 @@ fn main() {
         while !sysctl.prgpio.read().r10().bit() {}
         while !sysctl.prgpio.read().r13().bit() {}
         while !sysctl.prgpio.read().r14().bit() {}
+
+        // Set up UART0 at 115200
+        let gpio_a = tm4c129x::GPIO_PORTA_AHB.borrow(cs);
+        gpio_a.dir.write(|w| w.dir().bits(0b11));
+        gpio_a.den.write(|w| w.den().bits(0b11));
+        gpio_a.afsel.write(|w| w.afsel().bits(0b11));
+        gpio_a.pctl.write(|w| unsafe { w.pmc0().bits(1).pmc1().bits(1) });
+
+        sysctl.rcgcuart.modify(|_, w| w.r0().bit(true));
+        while !sysctl.pruart.read().r0().bit() {}
+
+        let uart_0 = tm4c129x::UART0.borrow(cs);
+        uart_0.cc.write(|w| w.cs().altclk());
+        uart_0.ibrd.write(|w| w.divint().bits((UART_DIV_16P6 >> 6) as u16));
+        uart_0.fbrd.write(|w| w.divfrac().bits(UART_DIV_16P6 as u8));
+        uart_0.lcrh.write(|w| w.wlen()._8().fen().bit(true));
+        uart_0.ctl.write(|w| w.rxe().bit(true).txe().bit(true).uarten().bit(true));
 
         // Set up LEDs
         let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
@@ -269,6 +321,8 @@ fn main() {
         set_fv_pwm(PWM_LOAD/16);
         set_fbv_pwm(PWM_LOAD/8);
     });
+
+    println!("ready");
 
     loop {
         cortex_m::interrupt::free(|cs| {
