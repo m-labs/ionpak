@@ -122,6 +122,9 @@ pub fn process_errors() {
         if errors_n & AI_ERRN == 0 {
             hprintln!("Anode overcurrent");
         }
+        if errors_n & ERR_LATCHN == 0 {
+            hprintln!("Protection latched");
+        }
     });
 }
 
