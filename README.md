@@ -33,7 +33,7 @@ PCB rev 1:
 * D203 reversed polarity
 * R236 and R234 are swapped
 * Q301 needs to be NPN, change to BC817
-* increase R307 -> 3.3Kohm and increase R300 -> 33Kohm
+* increase R307 -> 3.3Kohm and increase R500 -> 33Kohm
 * C201: oscillates at 0 and 1nF, stable at 100nF
 * add clamp diodes to GND on op-amp outputs to ADC when op-amp has negative supply
 * R214 -> 4.7k
