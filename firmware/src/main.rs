@@ -1,24 +1,44 @@
 #![feature(used, const_fn, core_float)]
 #![no_std]
 
-#[macro_use]
 extern crate cortex_m;
 extern crate cortex_m_rt;
 extern crate tm4c129x;
 
 use core::cell::{Cell, RefCell};
 use core::fmt;
-use cortex_m::ctxt::Local;
 use cortex_m::exception::Handlers as ExceptionHandlers;
 use cortex_m::interrupt::Mutex;
 use tm4c129x::interrupt::Interrupt;
 use tm4c129x::interrupt::Handlers as InterruptHandlers;
 
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        use core::fmt::Write;
+        write!($crate::UART0, $($arg)*).unwrap()
+    })
+}
+
+#[macro_export]
+macro_rules! println {
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+
+#[macro_use]
 mod board;
 mod pid;
 mod loop_anode;
 mod loop_cathode;
 
+static TIME: Mutex<Cell<u64>> = Mutex::new(Cell::new(0));
+
+fn get_time() -> u64 {
+    cortex_m::interrupt::free(|cs| {
+        TIME.borrow(cs).get()
+    })
+}
 
 static LOOP_ANODE: Mutex<RefCell<loop_anode::Controller>> = Mutex::new(RefCell::new(
     loop_anode::Controller::new()));
@@ -42,21 +62,6 @@ impl fmt::Write for UART0 {
     }
 }
 
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => ({
-        use core::fmt::Write;
-        write!($crate::UART0, $($arg)*).unwrap()
-    })
-}
-
-#[macro_export]
-macro_rules! println {
-    ($fmt:expr) => (print!(concat!($fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
-}
-
-
 fn main() {
     board::init();
 
@@ -70,7 +75,7 @@ fn main() {
 
         let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
         let mut loop_cathode = LOOP_CATHODE.borrow(cs).borrow_mut();
-        let anode_cathode = 60.0;
+        let anode_cathode = 20.0;
         let cathode_bias = 12.0;
         loop_anode.set_target(anode_cathode+cathode_bias);
         loop_cathode.set_emission_target(anode_cathode/10000.0);
@@ -78,18 +83,65 @@ fn main() {
         board::set_fv_pwm(10);
     });
 
-    println!("ready");
+    println!(r#"
+  _                         _
+ (_)                       | |
+  _  ___  _ __  _ __   __ _| |
+ | |/ _ \| '_ \| '_ \ / _` | |/ /
+ | | (_) | | | | |_) | (_| |   <
+ |_|\___/|_| |_| .__/ \__,_|_|\_\
+               | |
+               |_|
+Ready."#);
 
+    let mut next_blink = 0;
+    let mut next_info = 0;
+    let mut led_state = true;
+    let mut latch_reset_time = None;
     loop {
         board::process_errors();
+
+        let time = get_time();
+
+        if time > next_blink {
+            led_state = !led_state;
+            next_blink = time + 100;
+            board::set_led(1, led_state);
+        }
+
+        if time > next_info {
+            // FIXME: done in ISR now because of FPU snafu
+            /*cortex_m::interrupt::free(|cs| {
+                LOOP_CATHODE.borrow(cs).borrow().debug_print();
+            });*/
+            next_info = next_info + 300;
+        }
+
+        if board::error_latched() {
+            match latch_reset_time {
+                None => {
+                    println!("Protection latched");
+                    latch_reset_time = Some(time + 1000);
+                }
+                Some(t) => if time > t {
+                    latch_reset_time = None;
+                    cortex_m::interrupt::free(|cs| {
+                        board::reset_error();
+                        // reset PID loops as they have accumulated large errors
+                        // while the protection was active, which would cause
+                        // unnecessary overshoots.
+                        LOOP_ANODE.borrow(cs).borrow_mut().reset();
+                        LOOP_CATHODE.borrow(cs).borrow_mut().reset();
+                    });
+                    println!("Protection reset");
+                }
+            }
+        }
     }
 }
 
 use tm4c129x::interrupt::ADC0SS0;
-extern fn adc0_ss0(ctxt: ADC0SS0) {
-    static ELAPSED: Local<Cell<u32>, ADC0SS0> = Local::new(Cell::new(0));
-    let elapsed = ELAPSED.borrow(&ctxt);
-
+extern fn adc0_ss0(_ctxt: ADC0SS0) {
     cortex_m::interrupt::free(|cs| {
         let adc0 = tm4c129x::ADC0.borrow(cs);
         if adc0.ostat.read().ov0().bit() {
@@ -97,7 +149,7 @@ extern fn adc0_ss0(ctxt: ADC0SS0) {
         }
         adc0.isc.write(|w| w.in0().bit(true));
 
-        let _ic_sample = adc0.ssfifo0.read().data().bits();
+        let ic_sample  = adc0.ssfifo0.read().data().bits();
         let fbi_sample = adc0.ssfifo0.read().data().bits();
         let fv_sample  = adc0.ssfifo0.read().data().bits();
         let fd_sample  = adc0.ssfifo0.read().data().bits();
@@ -109,17 +161,13 @@ extern fn adc0_ss0(ctxt: ADC0SS0) {
         loop_anode.adc_input(av_sample);
         loop_cathode.adc_input(fbi_sample, fd_sample, fv_sample, fbv_sample);
 
-        elapsed.set(elapsed.get() + 1);
-        if elapsed.get() % 100 == 0 {
-            board::set_led(1, true);
-            board::set_led(2, false);
-        }
-        if elapsed.get() % 100 == 50 {
-            board::set_led(1, false);
-            board::set_led(2, true);
-        }
-        if elapsed.get() == 1000 {
-            loop_cathode.ready();
+        let time = TIME.borrow(cs);
+        time.set(time.get() + 1);
+
+        if time.get() % 300 == 0 {
+            loop_anode.debug_print();
+            loop_cathode.debug_print();
+            println!("{}", ic_sample);
         }
     });
 }

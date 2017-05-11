@@ -55,7 +55,7 @@ impl Controller {
                 fbi_r225 + (fbi_voltage - fd_voltage)/board::FBI_R223
             },
             board::EmissionRange::High => {
-                let fd_voltage = 0.8;
+                let fd_voltage = 0.9;
                 fbi_r225 + (fbi_voltage - fd_voltage)/board::FBI_R224
             }
         };
@@ -92,9 +92,10 @@ impl Controller {
     }
 
     pub fn emission_ready(&self) -> bool {
+        let tolerance = if self.fbi_range == board::EmissionRange::High { 0.20 } else { 0.02 };
         match self.last_fbi {
             None => false,
-            Some(last_fbi) => (self.fbi_target - last_fbi).abs()/self.fbi_target < 0.02
+            Some(last_fbi) => (self.fbi_target - last_fbi).abs()/self.fbi_target < tolerance
         }
     }
 
@@ -106,9 +107,27 @@ impl Controller {
     }
 
     pub fn ready(&self) -> bool {
-        hprintln!("emission current: {}mA", 1000.0*self.last_fbi.unwrap());
-        hprintln!("filament voltage: {}V", self.last_fv.unwrap());
-        hprintln!("bias voltage: {}V", self.last_fbv.unwrap());
         self.emission_ready() & self.bias_ready()
+    }
+
+    pub fn reset(&mut self) {
+        self.pid.reset();
+        self.fbi_buffer_count = 0;
+        self.last_fbi = None;
+        self.last_fv = None;
+        self.last_fbv = None;
+    }
+
+    pub fn debug_print(&self) {
+        println!("cathode ready: {}", self.ready());
+        if self.last_fbi.is_some() {
+            println!("emission: {}mA", 1000.0*self.last_fbi.unwrap());
+        }
+        if self.last_fv.is_some() {
+            println!("fil voltage: {}V", self.last_fv.unwrap());
+        }
+        if self.last_fbv.is_some() {
+            println!("bias voltage: {}V", self.last_fbv.unwrap());
+        }
     }
 }

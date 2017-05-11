@@ -81,7 +81,7 @@ pub fn set_fbv_pwm(duty: u16) {
 }
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EmissionRange {
     Low,  // 22K
     Med,  // 22K//(200Ω + compensated diode)
@@ -102,39 +102,41 @@ pub fn set_emission_range(range: EmissionRange) {
     });
 }
 
-fn reset_error() {
+pub fn reset_error() {
     cortex_m::interrupt::free(|cs| {
-        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
         let gpio_q = tm4c129x::GPIO_PORTQ.borrow(cs);
         gpio_q.data.modify(|r, w| w.data().bits(r.data().bits() & !ERR_RESN));
-        while gpio_l.data.read().bits() as u8 & ERR_LATCHN == 0 {}
         gpio_q.data.modify(|r, w| w.data().bits(r.data().bits() | ERR_RESN));
     });
 }
 
-pub fn process_errors() {
+pub fn error_latched() -> bool {
     cortex_m::interrupt::free(|cs| {
         let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
-        let errors_n = gpio_l.data.read().bits() as u8;
-        if errors_n & FV_ERRN == 0 {
-            hprintln!("Filament overvolt");
-        }
-        if errors_n & FBV_ERRN == 0 {
-            hprintln!("Filament bias overvolt");
-        }
-        if errors_n & FBI_ERRN == 0 {
-            hprintln!("Filament bias overcurrent");
-        }
-        if errors_n & AV_ERRN == 0 {
-            hprintln!("Anode overvolt");
-        }
-        if errors_n & AI_ERRN == 0 {
-            hprintln!("Anode overcurrent");
-        }
-        if errors_n & ERR_LATCHN == 0 {
-            hprintln!("Protection latched");
-        }
+        gpio_l.data.read().bits() as u8 & ERR_LATCHN == 0
+    })
+}
+
+pub fn process_errors() {
+    let errors_n = cortex_m::interrupt::free(|cs| {
+        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+        gpio_l.data.read().bits() as u8
     });
+    if errors_n & FV_ERRN == 0 {
+        println!("Filament overvolt");
+    }
+    if errors_n & FBV_ERRN == 0 {
+        println!("Filament bias overvolt");
+    }
+    if errors_n & FBI_ERRN == 0 {
+        println!("Filament bias overcurrent");
+    }
+    if errors_n & AV_ERRN == 0 {
+        println!("Anode overvolt");
+    }
+    if errors_n & AI_ERRN == 0 {
+        println!("Anode overcurrent");
+    }
 }
 
 pub fn init() {

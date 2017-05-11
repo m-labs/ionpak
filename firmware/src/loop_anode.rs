@@ -30,10 +30,21 @@ impl Controller {
     }
 
     pub fn set_target(&mut self, volts: f32) {
-        self.pid.set_target(volts*board::AV_ADC_GAIN)
+        self.pid.target = volts*board::AV_ADC_GAIN;
     }
 
-    pub fn ready(&mut self) -> bool {
+    pub fn ready(&self) -> bool {
         self.pid.is_within(1.0*board::AV_ADC_GAIN)
+    }
+
+    pub fn reset(&mut self) {
+        self.pid.reset();
+    }
+
+    pub fn debug_print(&self) {
+        println!("anode ready: {}", self.ready());
+        if self.pid.last_input.is_some() {
+            println!("voltage: {}V", self.pid.last_input.unwrap()/board::AV_ADC_GAIN);
+        }
     }
 }

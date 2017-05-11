@@ -13,9 +13,9 @@ pub struct Parameters {
 
 pub struct Controller {
     parameters: Parameters,
-    target: f32,
+    pub target: f32,
     integral: f32,
-    last_input: Option<f32>
+    pub last_input: Option<f32>
 }
 
 impl Controller {
@@ -56,10 +56,6 @@ impl Controller {
             output = self.parameters.output_max;
         }
         output
-    }
-
-    pub fn set_target(&mut self, target: f32) {
-        self.target = target
     }
 
     #[allow(dead_code)]
