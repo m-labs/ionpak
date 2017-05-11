@@ -37,6 +37,10 @@ pub const FD_ADC_GAIN: f32 = 3111.1111111111104;
 pub const FD_ADC_OFFSET: f32 = 96.0;
 pub const FBV_ADC_GAIN: f32 = 49.13796058269066;
 pub const FBV_PWM_GAIN: f32 = 0.5730803571428571;
+pub const IC_ADC_GAIN_LOW: f32 = 1333333333333.3333;
+pub const IC_ADC_GAIN_MED: f32 = 13201320132.0132;
+pub const IC_ADC_GAIN_HIGH: f32 = 133320001.3332;
+pub const IC_ADC_OFFSET: f32 = 96.0;
 
 pub const FBI_R223: f32 = 200.0;
 pub const FBI_R224: f32 = 39.0;
@@ -80,7 +84,6 @@ pub fn set_fbv_pwm(duty: u16) {
     });
 }
 
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EmissionRange {
     Low,  // 22K
@@ -97,6 +100,27 @@ pub fn set_emission_range(range: EmissionRange) {
                 EmissionRange::Low  => w.data().bits(value | 0b000000),
                 EmissionRange::Med  => w.data().bits(value | 0b001000),
                 EmissionRange::High => w.data().bits(value | 0b010000),
+            }
+        });
+    });
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ElectrometerRange {
+    Low,  // 1G
+    Med,  // 1G//10M
+    High  // 1G//100K
+}
+
+pub fn set_electrometer_range(range: ElectrometerRange) {
+    cortex_m::interrupt::free(|cs| {
+        let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
+        gpio_p.data.modify(|r, w| {
+            let value = r.data().bits() & 0b111100;
+            match range {
+                ElectrometerRange::Low  => w.data().bits(value | 0b000000),
+                ElectrometerRange::Med  => w.data().bits(value | 0b000001),
+                ElectrometerRange::High => w.data().bits(value | 0b000010),
             }
         });
     });
@@ -201,6 +225,8 @@ pub fn init() {
         let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
         gpio_p.dir.write(|w| w.dir().bits(0b111111));
         gpio_p.den.write(|w| w.den().bits(0b111111));
+        set_emission_range(EmissionRange::Med);
+        set_electrometer_range(ElectrometerRange::Med);
 
         // Set up error pins
         let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
@@ -209,7 +235,7 @@ pub fn init() {
         gpio_l.den.write(|w| w.den().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN|ERR_LATCHN));
         gpio_q.dir.write(|w| w.dir().bits(ERR_RESN));
         gpio_q.den.write(|w| w.den().bits(ERR_RESN));
-        reset_error();
+        reset_error(); // error latch is an undefined state upon power-up; reset it
 
         // Set up PWMs
         let gpio_f = tm4c129x::GPIO_PORTF_AHB.borrow(cs);

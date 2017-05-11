@@ -27,12 +27,20 @@ pub struct Controller {
     last_fbv: Option<f32>
 }
 
+#[derive(Clone, Copy)]
+pub struct ControllerStatus {
+    pub ready: bool,
+    pub fbi: Option<f32>,
+    pub fv: Option<f32>,
+    pub fbv: Option<f32>
+}
+
 
 impl Controller {
     pub const fn new() -> Controller {
         Controller {
             fbi_target: 0.0,
-            fbi_range: board::EmissionRange::Low,
+            fbi_range: board::EmissionRange::Med,
             fbi_buffer: [0.0; 16],
             fbi_buffer_count: 0,
             last_fbi: None,
@@ -91,23 +99,18 @@ impl Controller {
         board::set_fbv_pwm((volts/board::FBV_PWM_GAIN) as u16);
     }
 
-    pub fn emission_ready(&self) -> bool {
-        let tolerance = if self.fbi_range == board::EmissionRange::High { 0.20 } else { 0.02 };
+    fn emission_ready(&self) -> bool {
         match self.last_fbi {
             None => false,
-            Some(last_fbi) => (self.fbi_target - last_fbi).abs()/self.fbi_target < tolerance
+            Some(last_fbi) => (self.fbi_target - last_fbi).abs()/self.fbi_target < 0.02
         }
     }
 
-    pub fn bias_ready(&self) -> bool {
+    fn bias_ready(&self) -> bool {
         match self.last_fbv {
             None => false,
             Some(last_fbv) => (self.fbv_target - last_fbv).abs() < 1.0
         }
-    }
-
-    pub fn ready(&self) -> bool {
-        self.emission_ready() & self.bias_ready()
     }
 
     pub fn reset(&mut self) {
@@ -118,16 +121,28 @@ impl Controller {
         self.last_fbv = None;
     }
 
+    pub fn get_status(&self) -> ControllerStatus {
+        ControllerStatus {
+            ready: self.emission_ready() & self.bias_ready(),
+            fbi: self.last_fbi,
+            fv: self.last_fv,
+            fbv: self.last_fbv
+        }
+    }
+
+}
+
+impl ControllerStatus {
     pub fn debug_print(&self) {
-        println!("cathode ready: {}", self.ready());
-        if self.last_fbi.is_some() {
-            println!("emission: {}mA", 1000.0*self.last_fbi.unwrap());
+        println!("cathode ready: {}", self.ready);
+        if self.fbi.is_some() {
+            println!("emission: {}mA", 1000.0*self.fbi.unwrap());
         }
-        if self.last_fv.is_some() {
-            println!("fil voltage: {}V", self.last_fv.unwrap());
+        if self.fv.is_some() {
+            println!("fil voltage: {}V", self.fv.unwrap());
         }
-        if self.last_fbv.is_some() {
-            println!("bias voltage: {}V", self.last_fbv.unwrap());
+        if self.fbv.is_some() {
+            println!("bias voltage: {}V", self.fbv.unwrap());
         }
     }
 }

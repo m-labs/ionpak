@@ -31,6 +31,7 @@ mod board;
 mod pid;
 mod loop_anode;
 mod loop_cathode;
+mod electrometer;
 
 static TIME: Mutex<Cell<u64>> = Mutex::new(Cell::new(0));
 
@@ -45,6 +46,9 @@ static LOOP_ANODE: Mutex<RefCell<loop_anode::Controller>> = Mutex::new(RefCell::
 
 static LOOP_CATHODE: Mutex<RefCell<loop_cathode::Controller>> = Mutex::new(RefCell::new(
     loop_cathode::Controller::new()));
+
+static ELECTROMETER: Mutex<RefCell<electrometer::Electrometer>> = Mutex::new(RefCell::new(
+    electrometer::Electrometer::new()));
 
 
 pub struct UART0;
@@ -80,7 +84,7 @@ fn main() {
         loop_anode.set_target(anode_cathode+cathode_bias);
         loop_cathode.set_emission_target(anode_cathode/10000.0);
         loop_cathode.set_bias_target(cathode_bias);
-        board::set_fv_pwm(10);
+        //board::set_fv_pwm(10);
     });
 
     println!(r#"
@@ -126,12 +130,12 @@ Ready."#);
                 Some(t) => if time > t {
                     latch_reset_time = None;
                     cortex_m::interrupt::free(|cs| {
-                        board::reset_error();
                         // reset PID loops as they have accumulated large errors
                         // while the protection was active, which would cause
                         // unnecessary overshoots.
                         LOOP_ANODE.borrow(cs).borrow_mut().reset();
                         LOOP_CATHODE.borrow(cs).borrow_mut().reset();
+                        board::reset_error();
                     });
                     println!("Protection reset");
                 }
@@ -158,16 +162,18 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
 
         let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
         let mut loop_cathode = LOOP_CATHODE.borrow(cs).borrow_mut();
+        let mut electrometer = ELECTROMETER.borrow(cs).borrow_mut();
         loop_anode.adc_input(av_sample);
         loop_cathode.adc_input(fbi_sample, fd_sample, fv_sample, fbv_sample);
+        electrometer.adc_input(ic_sample);
 
         let time = TIME.borrow(cs);
         time.set(time.get() + 1);
 
         if time.get() % 300 == 0 {
-            loop_anode.debug_print();
-            loop_cathode.debug_print();
-            println!("{}", ic_sample);
+            //loop_anode.get_status().debug_print();
+            //loop_cathode.get_status().debug_print();
+            electrometer.get_status().debug_print();
         }
     });
 }
