@@ -43,3 +43,10 @@ PCB rev 1:
 * D504 should follow the schematics in its datasheet
 * R502 should be connected to VCC
 * R234 -> 7.5k
+
+License
+-------
+
+Copyright 2017 M-Labs Limited.
+
+License TBD, probably will be CERN OHL and GPL.
