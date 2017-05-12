@@ -42,7 +42,13 @@ PCB rev 1:
 * the relay model should be changed to 9001-05-00. 9001-05-02 is an undocumented normally closed variant.
 * D504 should follow the schematics in its datasheet
 * R502 should be connected to VCC
+* R502 -> 240 ohm
 * R234 -> 7.5k
+* Q104 -> DMN3404
+* R114 -> 100 ohm
+* R115 -> 1k
+* R227 -> 100 ohm
+* R228 -> 1k
 
 License
 -------
