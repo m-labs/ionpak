@@ -3,14 +3,24 @@ use core::num::Float;
 use board;
 use pid;
 
-const PID_PARAMETERS: pid::Parameters = pid::Parameters {
-    kp: 0.004,
-    ki: 0.002,
+const FBI_PID_PARAMETERS: pid::Parameters = pid::Parameters {
+    kp: 180.0,
+    ki: 90.0,
+    kd: 0.0,
+    output_min: 0.5,
+    output_max: 3.0,
+    integral_min: -0.02,
+    integral_max: 0.02
+};
+
+const FV_PID_PARAMETERS: pid::Parameters = pid::Parameters {
+    kp: 1.80,
+    ki: 0.3,
     kd: 0.0,
     output_min: 0.0,
     output_max: 30.0,
-    integral_min: -5000.0,
-    integral_max: 5000.0
+    integral_min: -50.0,
+    integral_max: 50.0
 };
 
 pub struct Controller {
@@ -19,8 +29,9 @@ pub struct Controller {
     fbi_buffer: [f32; 16],
     fbi_buffer_count: usize,
     last_fbi: Option<f32>,
-    pid: pid::Controller,
+    fbi_pid: pid::Controller,
 
+    fv_pid: pid::Controller,
     last_fv: Option<f32>,
 
     fbv_target: f32,
@@ -35,7 +46,6 @@ pub struct ControllerStatus {
     pub fbv: Option<f32>
 }
 
-
 impl Controller {
     pub const fn new() -> Controller {
         Controller {
@@ -44,8 +54,9 @@ impl Controller {
             fbi_buffer: [0.0; 16],
             fbi_buffer_count: 0,
             last_fbi: None,
-            pid: pid::Controller::new(PID_PARAMETERS),
+            fbi_pid: pid::Controller::new(FBI_PID_PARAMETERS),
 
+            fv_pid: pid::Controller::new(FV_PID_PARAMETERS),
             last_fv: None,
 
             fbv_target: 0.0,
@@ -78,7 +89,14 @@ impl Controller {
             self.fbi_buffer_count = 0;
         }
 
-        self.last_fv = Some(fv_sample as f32/board::FV_ADC_GAIN);
+        let fv_target = self.fbi_pid.update(fbi);
+        self.fv_pid.set_target(fv_target);
+
+        let fv = fv_sample as f32/board::FV_ADC_GAIN;
+        let fv_pwm_duty = self.fv_pid.update(fv);
+        board::set_fv_pwm(fv_pwm_duty as u16);
+
+        self.last_fv = Some(fv);
         self.last_fbv = Some(fbv_sample as f32/board::FBV_ADC_GAIN);
     }
 
@@ -102,7 +120,7 @@ impl Controller {
     fn emission_ready(&self) -> bool {
         match self.last_fbi {
             None => false,
-            Some(last_fbi) => (self.fbi_target - last_fbi).abs()/self.fbi_target < 0.02
+            Some(last_fbi) => (self.fbi_target - last_fbi).abs()/self.fbi_target < 0.05
         }
     }
 
@@ -114,7 +132,8 @@ impl Controller {
     }
 
     pub fn reset(&mut self) {
-        self.pid.reset();
+        self.fbi_pid.reset();
+        self.fv_pid.reset();
         self.fbi_buffer_count = 0;
         self.last_fbi = None;
         self.last_fv = None;
@@ -134,15 +153,15 @@ impl Controller {
 
 impl ControllerStatus {
     pub fn debug_print(&self) {
-        println!("cathode ready: {}", self.ready);
+        println!("cathode rdy: {}", self.ready);
         if self.fbi.is_some() {
-            println!("emission: {}mA", 1000.0*self.fbi.unwrap());
+            println!("emi: {}mA", 1000.0*self.fbi.unwrap());
         }
         if self.fv.is_some() {
-            println!("fil voltage: {}V", self.fv.unwrap());
+            println!("fil: {}V", self.fv.unwrap());
         }
         if self.fbv.is_some() {
-            println!("bias voltage: {}V", self.fbv.unwrap());
+            println!("bias: {}V", self.fbv.unwrap());
         }
     }
 }

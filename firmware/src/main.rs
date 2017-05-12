@@ -84,7 +84,6 @@ fn main() {
         loop_anode.set_target(anode_cathode+cathode_bias);
         loop_cathode.set_emission_target(anode_cathode/10000.0);
         loop_cathode.set_bias_target(cathode_bias);
-        //board::set_fv_pwm(10);
     });
 
     println!(r#"
@@ -171,8 +170,9 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
         time.set(time.get() + 1);
 
         if time.get() % 300 == 0 {
-            //loop_anode.get_status().debug_print();
-            //loop_cathode.get_status().debug_print();
+            println!("");
+            loop_anode.get_status().debug_print();
+            loop_cathode.get_status().debug_print();
             electrometer.get_status().debug_print();
         }
     });
