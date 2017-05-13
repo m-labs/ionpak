@@ -45,10 +45,11 @@ PCB rev 1:
 * R502 -> 240 ohm
 * R234 -> 7.5k
 * Q104 -> DMN3404
-* R114 -> 100 ohm
-* R115 -> 1k
-* R227 -> 100 ohm
-* R228 -> 1k
+* R114 -> 470 ohm
+* R115 -> 4.7k
+* R227 -> 470 ohm
+* R228 -> 4.7k
+* review values of R226 and R113
 
 License
 -------
