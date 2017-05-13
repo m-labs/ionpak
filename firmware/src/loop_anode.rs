@@ -4,8 +4,8 @@ use board;
 use pid;
 
 const PID_PARAMETERS: pid::Parameters = pid::Parameters {
-    kp: 0.027,
-    ki: 0.014,
+    kp: 0.035,
+    ki: 0.025,
     kd: 0.0,
     output_min: 0.0,
     output_max: 30.0,
