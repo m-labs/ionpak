@@ -2,7 +2,7 @@ use board;
 
 pub struct Electrometer {
     range: board::ElectrometerRange,
-    ic_buffer: [f32; 16],
+    ic_buffer: [f32; 64],
     ic_buffer_count: usize,
     last_ic: Option<f32>
 }
@@ -16,7 +16,7 @@ impl Electrometer {
     pub const fn new() -> Electrometer {
         Electrometer {
             range: board::ElectrometerRange::Med,
-            ic_buffer: [0.0; 16],
+            ic_buffer: [0.0; 64],
             ic_buffer_count: 0,
             last_ic: None
         }
