@@ -102,6 +102,7 @@ impl Controller {
 
     pub fn set_emission_target(&mut self, amperes: f32) {
         self.fbi_target = amperes;
+        self.fbi_pid.set_target(amperes);
         self.fbi_range = board::EmissionRange::Low;
         if amperes > 120e-6 {
             self.fbi_range = board::EmissionRange::Med;
