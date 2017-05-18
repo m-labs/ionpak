@@ -30,13 +30,13 @@ impl Electrometer {
         if self.ignore_count > 0 {
             self.ignore_count -= 1;
         } else {
-            let mut new_range = if ic_sample > 3350 {
+            let mut new_range = if ic_sample > 3100 {
                 match self.range {
                     board::ElectrometerRange::Low => Some(board::ElectrometerRange::Med),
                     board::ElectrometerRange::Med => Some(board::ElectrometerRange::High),
                     board::ElectrometerRange::High => None
                 }
-            } else if ic_sample < 400 {
+            } else if ic_sample < 200 {
                 match self.range {
                     board::ElectrometerRange::Low => None,
                     board::ElectrometerRange::Med => Some(board::ElectrometerRange::Low),

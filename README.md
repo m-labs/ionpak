@@ -1,9 +1,57 @@
 ionpak
 ======
 
-A modern, low-cost universal controller for ionization vacuum gauges.
+A modern, low-cost universal controller for hot-cathode ionization vacuum gauges.
 
 ![Prototype picture](https://raw.githubusercontent.com/m-labs/ionpak/master/proto_rev1_small.jpg)
+
+Why?
+----
+
+Many physics experiments require a good vacuum and therefore tools to diagnose vacuum-related problems. Ionization gauges provide a way to measure pressures in the medium to ultra-high vacuum regimes.
+
+While the gauges themselves can be procured quite easily, the controller situation is more problematic. Existing commercial and DIY solutions have one or more of the following issues:
+
+ * expensive
+ * proprietary
+ * poor performance at low (pA) collector currents
+ * designed with obsolete components and overly bulky
+ * lack of gauge voltage/current programmability
+ * no/poor connectivity to a logging database
+ * poor design and construction
+
+The ionpak features:
+
+ * a single-board low-cost design with modern components
+ * open hardware and software
+ * sub-pA electrometer performance
+ * configurable voltages and emission current to adapt to various gauges
+ * Ethernet connectivity
+
+Where to find ionization vacuum gauges?
+---------------------------------------
+
+For medium and high vacuum, Chinese gauges can be ordered on Taobao under references ZJ-27 and ZJ-10. Those gauges have a simple construction and an extremely low cost, under USD 10 for glass tubulated models (requiring flameworking) and a few times that price for flange-mounted ones. Those manufactured by [Chengdu Zhenghua](http://www.zhvacuum.com) appear to work satisfactorily, and glass gauges arrive sealed under vacuum (around 10⁻⁵ to 10⁻⁶ mbar) so can be tested immediately. Ceramic sockets for the gauges can often be ordered from the same Taobao vendor.
+
+For ultra-high vacuum, you can use G8130 from KJLC, which is pricy but of excellent quality. There is a lower-cost Bayard-Alpert Chinese gauge ZJ-12, of dubious quality for those pressure ranges, and with 2.5x less sensitivity than the KJLC part.
+
+A low-cost source of quality UHV gauges remains to be found. You can try eBay, but the condition of the items is highly random.
+
+How to connect the gauge?
+-------------------------
+
+The collector must be connected with a shielded (e.g. coaxial) cable. If the gauge has a metallic body (e.g. gauges mounted on CF flanges), connect the shield of the cable to it, so that current from the high voltage electrodes will not leak into the collector electrode. This should not cause any ground loop in your system, as the gauge circuit inside the ionpak is galvanically isolated from its power input and from its Ethernet connector.
+
+If a single cable is used for the filament and anode connections, the anode connection must be particularly well insulated from the filament connections, to avoid leakage currents that can be significant when the gauge is operated with a low emission (100µA or less) and influence the measurement result.
+
+For baked systems, use PTFE insulated cables that can withstand 200°C. Operating the gauge during bake-out can remove the need to degas it (see the paper [Comments on the stability of B-A ionization gages](https://www.nist.gov/sites/default/files/documents/calibrations/jv13-2.pdf)).
+
+It is a good idea to attach the cables to the vacuum system with a strap to avoid damaging the gauge by accidentally pulling on the cables, and to place a cover onto the pins to reduce the electrical shock hazard from the high voltage. Preferably those items should be made of metal so that they can be left on during bakeout.
+
+Warning
+-------
+
+Ionization gauges use dangerous voltages and the ionpak is capable of delivering a lethal amount of power. Be careful and use at your own risk.
 
 Building and loading the firmware
 ---------------------------------
@@ -14,46 +62,6 @@ openocd -f support/openocd.cfg
 xargo build --release
 arm-none-eabi-gdb -x support/load.gdb target/thumbv7em-none-eabihf/release/ionpak-firmware
 ```
-
-Flyback transformer construction
---------------------------------
-
-TR300: Use EPCOS coilformer B66208X1010T1. Wind 5 turns on the primary and spread them across the length of the coilformer - it is particularly important that the air gap between the cores is covered by windings. Wind 70 turns on the secondary in multiple layers. As with all flyback transformers, the polarity of the windings is critical. Assemble with EPCOS cores B66317G500X127 and B66317GX127 (one half gapped core, one half ungapped core), and corresponding clips.
-
-TR350: Use EPCOS coilformer B66206W1110T1 and cores B66311G250X127 and B66311GX127. Both the primary and the secondary have 5 turns and must be wound together, interleaving the windings. The same remarks as for TR300 apply.
-
-Errata
-------
-
-PCB rev 1:
-
-* R307 needs more clearance from D400
-* Pins 1 and 12 of U502 need pull-downs
-* Pin 1 of U501 needs pull-up
-* D203 reversed polarity
-* R236 and R234 are swapped
-* Q301 needs to be NPN, change to BC817
-* increase R307 -> 3.3Kohm and increase R500 -> 33Kohm
-* C201: oscillates at 0 and 1nF, stable at 100nF
-* add clamp diodes to GND on op-amp outputs to ADC when op-amp has negative supply
-* R214 -> 4.7k
-* LM339PT is in TSSOP package. Change for SOIC P/N
-* GDT200 minimum firing voltage is too low
-* the relay model should be changed to 9001-05-00. 9001-05-02 is an undocumented normally closed variant.
-* D504 should follow the schematics in its datasheet
-* R502 should be connected to VCC
-* R502 -> 240 ohm
-* R234 -> 7.5k
-* Q104 -> DMN3404
-* R114 -> 470 ohm
-* R115 -> 4.7k
-* R227 -> 470 ohm
-* R228 -> 4.7k
-* review values of R226 and R113
-* use crystal type recommended by the MCU datasheet
-* fix filament voltage protection threshold
-* 22k FBI current resistor -> 10k?
-* add connector for OLED display? 
 
 License
 -------

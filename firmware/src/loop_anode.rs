@@ -51,7 +51,7 @@ impl Controller {
     fn ready(&self) -> bool {
         match self.last_av {
             None => false,
-            Some(last_av) => (last_av - self.target).abs() < 1.0
+            Some(last_av) => (last_av - self.target).abs() < 2.0
         }
     }
 
