@@ -42,7 +42,7 @@ How to connect the gauge?
 
 The collector must be connected with a shielded (e.g. coaxial) cable. If the gauge has a metallic body (e.g. gauges mounted on CF flanges), connect the shield of the cable to the body, so that current from the high voltage electrodes will not leak into the collector electrode. This should not cause any ground loop in your system, as the gauge circuits inside the ionpak are galvanically isolated from its power input and from its Ethernet connector.
 
-If a single cable is used for the filament and anode connections, the anode connection must be particularly well insulated from the filament connections, to avoid leakage currents that can be significant when the gauge is operated with a low emission (100µA or less) and influence the measurement result.
+If a single cable is used for the filament and anode connections, the anode wire must be particularly well insulated from the filament wires, to avoid leakage currents that can be significant when the gauge is operated with a low emission (100µA or less) and influence the measurement result.
 
 "Domino" terminal blocks from the local hardware store, with the plastic removed, can be used to connect the cables to the pins of CF-flanged gauges.
 
