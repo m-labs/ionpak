@@ -31,7 +31,7 @@ The ionpak features:
 Where to find ionization vacuum gauges?
 ---------------------------------------
 
-For medium and high vacuum, Chinese gauges can be ordered on Taobao under references ZJ-27 and ZJ-10. Those gauges have a simple construction and an extremely low cost, under USD 10 for glass tubulated models (requiring flameworking) and a few times that price for flange-mounted ones. Those manufactured by [Chengdu Zhenghua](http://www.zhvacuum.com) appear to work satisfactorily, and glass gauges arrive sealed under vacuum (around 10⁻⁵ to 10⁻⁶ mbar) so can be tested immediately. Ceramic sockets for the gauges can often be ordered from the same Taobao vendor.
+For medium and high vacuum, Chinese gauges can be ordered on Taobao under references ZJ-27 and ZJ-10. The Chinese for ionization gauge is 电离规. Those gauges have a simple construction and an extremely low cost, under USD 10 for glass tubulated models (requires flameworking) and a few times that price for flange-mounted ones. Those manufactured by [Chengdu Zhenghua](http://www.zhvacuum.com) appear to work satisfactorily, and glass gauges arrive sealed under vacuum (around 10⁻⁵ to 10⁻⁶ mbar) so they can be tested immediately. Ceramic sockets for the gauges can often be ordered from the same Taobao vendor.
 
 For ultra-high vacuum, you can use G8130 from KJLC, which is pricy but of excellent quality. There is a lower-cost Bayard-Alpert Chinese gauge ZJ-12, of dubious quality for those pressure ranges, and with 2.5x less sensitivity than the KJLC part.
 
@@ -40,9 +40,11 @@ A low-cost source of quality UHV gauges remains to be found. You can try eBay, b
 How to connect the gauge?
 -------------------------
 
-The collector must be connected with a shielded (e.g. coaxial) cable. If the gauge has a metallic body (e.g. gauges mounted on CF flanges), connect the shield of the cable to it, so that current from the high voltage electrodes will not leak into the collector electrode. This should not cause any ground loop in your system, as the gauge circuit inside the ionpak is galvanically isolated from its power input and from its Ethernet connector.
+The collector must be connected with a shielded (e.g. coaxial) cable. If the gauge has a metallic body (e.g. gauges mounted on CF flanges), connect the shield of the cable to the body, so that current from the high voltage electrodes will not leak into the collector electrode. This should not cause any ground loop in your system, as the gauge circuits inside the ionpak are galvanically isolated from its power input and from its Ethernet connector.
 
 If a single cable is used for the filament and anode connections, the anode connection must be particularly well insulated from the filament connections, to avoid leakage currents that can be significant when the gauge is operated with a low emission (100µA or less) and influence the measurement result.
+
+"Domino" terminal blocks from the local hardware store, with the plastic removed, can be used to connect the cables to the pins of CF-flanged gauges.
 
 For baked systems, use PTFE insulated cables that can withstand 200°C. Operating the gauge during bake-out can remove the need to degas it (see the paper [Comments on the stability of B-A ionization gages](https://www.nist.gov/sites/default/files/documents/calibrations/jv13-2.pdf)).
 
