@@ -27,6 +27,7 @@ Rev 1
 * R227 -> 470 ohm
 * R228 -> 4.7k
 * review values of R226 and R113
+* C100 -> 100pF NP0 AVX
 * use crystal type recommended by the MCU datasheet
 * fix filament voltage protection threshold
 * 22k FBI current resistor -> 10k?
