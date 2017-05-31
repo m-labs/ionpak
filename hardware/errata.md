@@ -13,7 +13,7 @@ Rev 1
 * increase R307 -> 3.3Kohm and increase R500 -> 33Kohm
 * C201: oscillates at 0 and 1nF, stable at 100nF
 * add clamp diodes to GND on op-amp outputs to ADC when op-amp has negative supply
-* R214 -> 4.7k
+* R214 -> 7.5k
 * LM339PT is in TSSOP package. Change for SOIC P/N
 * GDT200 minimum firing voltage is too low
 * the relay model should be changed to 9001-05-00. 9001-05-02 is an undocumented normally closed variant.
@@ -29,6 +29,5 @@ Rev 1
 * review values of R226 and R113
 * C100 -> 100pF NP0 AVX
 * use crystal type recommended by the MCU datasheet
-* fix filament voltage protection threshold
 * 22k FBI current resistor -> 10k?
 * add connector for OLED display?
