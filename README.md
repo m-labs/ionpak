@@ -44,7 +44,7 @@ The collector must be connected with a shielded (e.g. coaxial) cable. If the gau
 
 If a single cable is used for the filament and anode connections, the anode wire must be particularly well insulated from the filament wires, to avoid leakage currents that can be significant when the gauge is operated with a low emission (100µA or less) and influence the measurement result.
 
-"Domino" terminal blocks from the local hardware store, with the plastic removed, can be used to connect the cables to the pins of CF-flanged gauges.
+"Domino" terminal blocks from the local hardware store, with the plastic removed, can be used to connect the cables to the pins of CF-flanged gauges. Female circular contacts, such as Amphenol AT62-16-0122, are a nicer alternative but are slightly harder to find.
 
 For baked systems, use PTFE insulated cables that can withstand 200°C. Operating the gauge during bake-out can remove the need to degas it (see the paper [Comments on the stability of B-A ionization gages](https://www.nist.gov/sites/default/files/documents/calibrations/jv13-2.pdf)).
 
