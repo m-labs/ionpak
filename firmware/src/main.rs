@@ -92,8 +92,11 @@ fn main() {
         let emission = 1.0e-3;
         */
         // ZJ-12
-        let anode = 200.0;
+        /*let anode = 200.0;
         let cathode_bias = 50.0;
+        let emission = 4.0e-3;*/
+        let anode = 180.0;
+        let cathode_bias = 30.0;
         let emission = 4.0e-3;
         loop_anode.set_target(anode);
         loop_cathode.set_emission_target(emission);
@@ -185,9 +188,17 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
 
         if time.get() % 300 == 0 {
             println!("");
-            loop_anode.get_status().debug_print();
+            /*loop_anode.get_status().debug_print();
             loop_cathode.get_status().debug_print();
-            electrometer.get_status().debug_print();
+            electrometer.get_status().debug_print();*/
+            let cathode_status = loop_cathode.get_status();
+            let electrometer_status = electrometer.get_status();
+            if cathode_status.fbi.is_some() && electrometer_status.ic.is_some() {
+                let fbi = cathode_status.fbi.unwrap();
+                let ic = electrometer_status.ic.unwrap();
+                let pressure = ic/fbi/18.75154;
+                println!("{:.1e} mbar", pressure);
+            }
         }
     });
 }

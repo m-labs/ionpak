@@ -3,7 +3,7 @@ ionpak
 
 A modern, low-cost universal controller for hot-cathode ionization vacuum gauges.
 
-![Prototype picture](https://raw.githubusercontent.com/m-labs/ionpak/master/proto_rev1_small.jpg)
+![Test setup](https://raw.githubusercontent.com/m-labs/ionpak/master/pictures/setup1_small.jpg)
 
 Why?
 ----
@@ -71,3 +71,5 @@ License
 Copyright 2017 M-Labs Limited.
 
 License TBD, probably will be CERN OHL and GPL.
+
+Pictures in the ``pictures`` folder, except ``proto_rev1.jpg``, are copyright Michelle Poon and not free.

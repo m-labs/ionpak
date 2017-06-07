@@ -36,7 +36,7 @@ impl Electrometer {
                     board::ElectrometerRange::Med => Some(board::ElectrometerRange::High),
                     board::ElectrometerRange::High => None
                 }
-            } else if ic_sample < 200 {
+            } else if ic_sample < 100 {
                 match self.range {
                     board::ElectrometerRange::Low => None,
                     board::ElectrometerRange::Med => Some(board::ElectrometerRange::Low),
