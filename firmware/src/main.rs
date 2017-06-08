@@ -79,25 +79,27 @@ fn main() {
 
         let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
         let mut loop_cathode = LOOP_CATHODE.borrow(cs).borrow_mut();
-        /*
+
         // ZJ-10
         let anode = 165.0;
         let cathode_bias = 50.0;
         let emission = 0.5e-3;
-        */
-        /*
+
         // ZJ-27
-        let anode = 225.0;
+        /*let anode = 225.0;
         let cathode_bias = 25.0;
-        let emission = 1.0e-3;
-        */
+        let emission = 1.0e-3;*/
+
         // ZJ-12
         /*let anode = 200.0;
         let cathode_bias = 50.0;
         let emission = 4.0e-3;*/
-        let anode = 180.0;
+
+        // G8130
+        /*let anode = 180.0;
         let cathode_bias = 30.0;
-        let emission = 4.0e-3;
+        let emission = 4.0e-3;*/
+
         loop_anode.set_target(anode);
         loop_cathode.set_emission_target(emission);
         loop_cathode.set_bias_target(cathode_bias);
