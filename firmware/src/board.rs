@@ -24,9 +24,8 @@ const AI_ERRN: u8 = 0x10;    // PL4
 const ERR_LATCHN: u8 = 0x20; // PL5
 const ERR_RESN: u8 = 0x01;   // PQ0
 
-const PWM_LOAD: u16 = (/*pwmclk*/16_000_000u32 / /*freq*/100_000) as u16;
-const UART_DIV_16P6: u32 = /*altclk*/16_000_000 * (1 << /*len(divfrac)*/6) /
-                           (/*clkdiv*/16 * /*baud*/115200);
+const PWM_LOAD: u16 = (/*pwmclk*/120_000_000u32 / /*freq*/100_000) as u16;
+const UART_DIV: u32 = (((/*sysclk*/120_000_000 * 8) / /*baud*/115200) + 1) / 2;
 
 
 pub const AV_ADC_GAIN: f32 = 6.792703150912105;
@@ -36,7 +35,7 @@ pub const FBI_ADC_OFFSET: f32 = 96.0;
 pub const FD_ADC_GAIN: f32 = 3111.1111111111104;
 pub const FD_ADC_OFFSET: f32 = 96.0;
 pub const FBV_ADC_GAIN: f32 = 49.13796058269066;
-pub const FBV_PWM_GAIN: f32 = 0.5730803571428571;
+pub const FBV_PWM_GAIN: f32 = 0.07641071428571428;
 pub const IC_ADC_GAIN_LOW: f32 = 1333333333333.3333;
 pub const IC_ADC_GAIN_MED: f32 = 13201320132.0132;
 pub const IC_ADC_GAIN_HIGH: f32 = 133320001.3332;
@@ -171,11 +170,18 @@ pub fn init() {
         sysctl.moscctl.write(|w| w.noxtal().bit(false));
         sysctl.moscctl.modify(|_, w| w.pwrdn().bit(false).oscrng().bit(true));
 
-        // Set up PLL with fVCO=320 MHz
+        // Prepare flash for the high-freq clk
+        sysctl.memtim0.write(|w| unsafe { w.bits(0x01950195u32) });
+        sysctl.rsclkcfg.write(|w| unsafe { w.bits(0x80000000u32) });
+
+        // Set up PLL with fVCO=480 MHz
         sysctl.pllfreq1.write(|w| w.q().bits(0).n().bits(4));
-        sysctl.pllfreq0.write(|w| w.mint().bits(64).pllpwr().bit(true));
+        sysctl.pllfreq0.write(|w| w.mint().bits(96).pllpwr().bit(true));
         sysctl.rsclkcfg.modify(|_, w| w.pllsrc().mosc().newfreq().bit(true));
         while !sysctl.pllstat.read().lock().bit() {}
+
+        // Switch to PLL (sysclk=120MHz)
+        sysctl.rsclkcfg.write(|w| unsafe { w.bits(0b1_0_0_1_0011_0000_0000000000_0000000011) });
 
         // Bring up GPIO ports A, D, E, F, G, K, L, P, Q
         sysctl.rcgcgpio.modify(|_, w| {
@@ -199,7 +205,7 @@ pub fn init() {
         while !sysctl.prgpio.read().r13().bit() {}
         while !sysctl.prgpio.read().r14().bit() {}
 
-        // Set up UART0 at 115200
+        // Set up UART0
         let gpio_a = tm4c129x::GPIO_PORTA_AHB.borrow(cs);
         gpio_a.dir.write(|w| w.dir().bits(0b11));
         gpio_a.den.write(|w| w.den().bits(0b11));
@@ -210,9 +216,9 @@ pub fn init() {
         while !sysctl.pruart.read().r0().bit() {}
 
         let uart_0 = tm4c129x::UART0.borrow(cs);
-        uart_0.cc.write(|w| w.cs().altclk());
-        uart_0.ibrd.write(|w| w.divint().bits((UART_DIV_16P6 >> 6) as u16));
-        uart_0.fbrd.write(|w| w.divfrac().bits(UART_DIV_16P6 as u8));
+        uart_0.cc.write(|w| w.cs().sysclk());
+        uart_0.ibrd.write(|w| w.divint().bits((UART_DIV / 64) as u16));
+        uart_0.fbrd.write(|w| w.divfrac().bits((UART_DIV % 64) as u8));
         uart_0.lcrh.write(|w| w.wlen()._8().fen().bit(true));
         uart_0.ctl.write(|w| w.rxe().bit(true).txe().bit(true).uarten().bit(true));
 
@@ -288,9 +294,8 @@ pub fn init() {
         while !sysctl.pradc.read().r0().bit() {}
 
         let adc0 = tm4c129x::ADC0.borrow(cs);
-        // Due to silicon erratum, this HAS to use PLL. PIOSC is not a suitable source.
-        // fADC=32 MHz
-        adc0.cc.write(|w| w.cs().syspll().clkdiv().bits(10));
+        // VCO 480 / 15 = 32MHz ADC clock
+        adc0.cc.write(|w| w.cs().syspll().clkdiv().bits(15-1));
         adc0.im.write(|w| w.mask0().bit(true));
         adc0.emux.write(|w| w.em0().always());
         adc0.ssmux0.write(|w| {

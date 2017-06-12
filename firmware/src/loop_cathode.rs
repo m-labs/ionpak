@@ -4,21 +4,21 @@ use board;
 use pid;
 
 const FBI_PID_PARAMETERS: pid::Parameters = pid::Parameters {
-    kp: 350.0,
-    ki: 70.0,
-    kd: 10.0,
+    kp: 400.0,
+    ki: 20.0,
+    kd: 0.0,
     output_min: 0.5,
     output_max: 3.1,
-    integral_min: -0.05,
-    integral_max: 0.05
+    integral_min: -0.1,
+    integral_max: 0.1
 };
 
 const FV_PID_PARAMETERS: pid::Parameters = pid::Parameters {
-    kp: 1.90,
-    ki: 0.35,
+    kp: 40.0,
+    ki: 1.0,
     kd: 0.0,
     output_min: 0.0,
-    output_max: 20.0,
+    output_max: 150.0,
     integral_min: -50.0,
     integral_max: 50.0
 };

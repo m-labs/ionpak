@@ -4,11 +4,11 @@ use board;
 use pid;
 
 const PID_PARAMETERS: pid::Parameters = pid::Parameters {
-    kp: 0.035,
-    ki: 0.025,
+    kp: 0.2,
+    ki: 0.05,
     kd: 0.0,
     output_min: 0.0,
-    output_max: 30.0,
+    output_max: 225.0,
     integral_min: -700.0,
     integral_max: 700.0
 };
@@ -44,7 +44,7 @@ impl Controller {
     }
 
     pub fn set_target(&mut self, volts: f32) {
-        self.target = 0.0;
+        self.target = volts;
         self.pid.set_target(volts);
     }
 

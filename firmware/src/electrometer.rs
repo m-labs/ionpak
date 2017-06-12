@@ -4,7 +4,7 @@ pub struct Electrometer {
     range: board::ElectrometerRange,
     out_of_range_count: u8,
     ignore_count: u8,
-    ic_buffer: [f32; 64],
+    ic_buffer: [f32; 512],
     ic_buffer_count: usize,
     last_ic: Option<f32>
 }
@@ -20,7 +20,7 @@ impl Electrometer {
             range: board::ElectrometerRange::Med,
             out_of_range_count: 0,
             ignore_count: 0,
-            ic_buffer: [0.0; 64],
+            ic_buffer: [0.0; 512],
             ic_buffer_count: 0,
             last_ic: None
         }
@@ -48,7 +48,7 @@ impl Electrometer {
 
             if new_range.is_some() {
                 self.out_of_range_count += 1;
-                if self.out_of_range_count < 10 {
+                if self.out_of_range_count < 75 {
                     new_range = None;
                 }
             } else {
@@ -56,7 +56,7 @@ impl Electrometer {
             }
 
             if new_range.is_some() {
-                self.ignore_count = 20;
+                self.ignore_count = 150;
                 self.ic_buffer_count = 0;
                 self.last_ic = None;
                 self.range = new_range.unwrap();

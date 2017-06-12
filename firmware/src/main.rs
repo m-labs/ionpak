@@ -1,4 +1,4 @@
-#![feature(used, const_fn, core_float)]
+#![feature(used, const_fn, core_float, asm)]
 #![no_std]
 
 extern crate cortex_m;
@@ -67,13 +67,29 @@ impl fmt::Write for UART0 {
 }
 
 fn main() {
+    // Enable the FPU
+    unsafe {
+        asm!("
+            PUSH {R0, R1}
+            LDR.W R0, =0xE000ED88
+            LDR R1, [R0]
+            ORR R1, R1, #(0xF << 20)
+            STR R1, [R0]
+            DSB
+            ISB
+            POP {R0, R1}
+        ");
+    }
+    // Beware of the compiler inserting FPU instructions
+    // in the prologue of functions before the FPU is enabled!
+    main_with_fpu();
+}
+
+#[inline(never)]
+fn main_with_fpu() {
     board::init();
 
     cortex_m::interrupt::free(|cs| {
-        // Enable FPU
-        let scb = tm4c129x::SCB.borrow(cs);
-        scb.enable_fpu();
-
         let nvic = tm4c129x::NVIC.borrow(cs);
         nvic.enable(Interrupt::ADC0SS0);
 
@@ -127,23 +143,36 @@ Ready."#);
 
         if time > next_blink {
             led_state = !led_state;
-            next_blink = time + 100;
+            next_blink = time + 1000;
             board::set_led(1, led_state);
         }
 
-        if time > next_info {
-            // FIXME: done in ISR now because of FPU snafu
-            /*cortex_m::interrupt::free(|cs| {
-                LOOP_CATHODE.borrow(cs).borrow().debug_print();
-            });*/
-            next_info = next_info + 300;
+        if time >= next_info {
+            let (anode, cathode, electrometer) = cortex_m::interrupt::free(|cs| {
+                (LOOP_ANODE.borrow(cs).borrow().get_status(),
+                 LOOP_CATHODE.borrow(cs).borrow().get_status(),
+                 ELECTROMETER.borrow(cs).borrow().get_status())
+            });
+
+            println!("");
+            anode.debug_print();
+            cathode.debug_print();
+            electrometer.debug_print();
+            if cathode.fbi.is_some() && electrometer.ic.is_some() {
+                let fbi = cathode.fbi.unwrap();
+                let ic = electrometer.ic.unwrap();
+                let pressure = ic/fbi/18.75154;
+                println!("{:.1e} mbar", pressure);
+            }
+
+            next_info = next_info + 3000;
         }
 
         if board::error_latched() {
             match latch_reset_time {
                 None => {
                     println!("Protection latched");
-                    latch_reset_time = Some(time + 1000);
+                    latch_reset_time = Some(time + 10000);
                 }
                 Some(t) => if time > t {
                     latch_reset_time = None;
@@ -187,21 +216,6 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
 
         let time = TIME.borrow(cs);
         time.set(time.get() + 1);
-
-        if time.get() % 300 == 0 {
-            println!("");
-            /*loop_anode.get_status().debug_print();
-            loop_cathode.get_status().debug_print();
-            electrometer.get_status().debug_print();*/
-            let cathode_status = loop_cathode.get_status();
-            let electrometer_status = electrometer.get_status();
-            if cathode_status.fbi.is_some() && electrometer_status.ic.is_some() {
-                let fbi = cathode_status.fbi.unwrap();
-                let ic = electrometer_status.ic.unwrap();
-                let pressure = ic/fbi/18.75154;
-                println!("{:.1e} mbar", pressure);
-            }
-        }
     });
 }
 
