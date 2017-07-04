@@ -1,5 +1,4 @@
-ionpak
-======
+![ionpak](https://raw.githubusercontent.com/m-labs/ionpak/master/logo.svg)
 
 A modern, low-cost universal controller for hot-cathode ionization vacuum gauges.
 
