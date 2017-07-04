@@ -31,3 +31,6 @@ Rev 1
 * use crystal type recommended by the MCU datasheet
 * 22k FBI current resistor -> 10k?
 * add connector for OLED display?
+* enlarge holes to fit M3 screws comfortably
+* add 15M (TBC) resistor between A and FIL-
+* power U200 from a small negative voltage instead of GND
