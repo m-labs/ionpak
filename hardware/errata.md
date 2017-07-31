@@ -34,3 +34,4 @@ Rev 1
 * enlarge holes to fit M3 screws comfortably
 * add 15M (TBC) resistor between A and FIL-
 * power U200 from a small negative voltage instead of GND
+* review choice of filament flyback output diode
