@@ -8,6 +8,12 @@ cortex-m = "0.2.5"
 cortex-m-rt = { version = "0.2.0", features = ["linker-script"], default-features = false }
 tm4c129x = { git = "https://github.com/m-labs/dslite2svd" }
 
+[dependencies.smoltcp]
+git = "https://github.com/m-labs/smoltcp"
+rev = "6bc6cc7"
+features = []
+default-features = false
+
 [profile.release]
 lto = true
 debug = true

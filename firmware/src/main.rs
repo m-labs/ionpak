@@ -4,6 +4,7 @@
 extern crate cortex_m;
 extern crate cortex_m_rt;
 extern crate tm4c129x;
+extern crate smoltcp;
 
 use core::cell::{Cell, RefCell};
 use core::fmt;
@@ -28,6 +29,7 @@ macro_rules! println {
 
 #[macro_use]
 mod board;
+mod ethmac;
 mod pid;
 mod loop_anode;
 mod loop_cathode;

@@ -353,7 +353,7 @@ impl Device for EthernetDevice {
         limits
     }
 
-    fn receive(&mut self) -> Result<Self::RxBuffer, Error> {
+    fn receive(&mut self, _timestamp: u64) -> Result<Self::RxBuffer, Error> {
         unsafe {
             if 0 == (EMAC_DATA.rx_desc_buf[EMAC_DATA.rx_cur_desc + 0] & EMAC_RDES0_OWN) {
                 // check for the whole packet in the buffer and no any error
@@ -375,7 +375,7 @@ impl Device for EthernetDevice {
         }
     }
 
-    fn transmit(&mut self, length: usize) -> Result<Self::TxBuffer, Error> {
+    fn transmit(&mut self, _timestamp: u64, length: usize) -> Result<Self::TxBuffer, Error> {
         unsafe {
             // Check if the TX DMA buffer released
             if 0 == (EMAC_DATA.tx_desc_buf[EMAC_DATA.tx_cur_desc + 0] & EMAC_TDES0_OWN) {
