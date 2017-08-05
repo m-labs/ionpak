@@ -166,8 +166,7 @@ fn main_with_fpu() {
     println!("MAC {} IP {}", hardware_addr, protocol_addrs[0]);
     let mut arp_cache_entries: [_; 8] = Default::default();
     let mut arp_cache = SliceArpCache::new(&mut arp_cache_entries[..]);
-    ethmac::init(hardware_addr.0);
-    let mut device = ethmac::EthernetDevice;
+    let mut device = ethmac::EthernetDevice::new(hardware_addr);
     let mut iface = EthernetInterface::new(
         &mut device, &mut arp_cache as &mut ArpCache,
         hardware_addr, &mut protocol_addrs[..]);
