@@ -320,3 +320,13 @@ pub fn init() {
         adc0.actss.write(|w| w.asen0().bit(true));
     });
 }
+
+pub fn get_mac_address() -> [u8; 6] {
+    let (userreg0, userreg1) = cortex_m::interrupt::free(|cs| {
+        let flashctl = tm4c129x::FLASH_CTRL.borrow(cs);
+        (flashctl.userreg0.read().bits(),
+         flashctl.userreg1.read().bits())
+    });
+    [userreg0 as u8, (userreg0 >> 8) as u8, (userreg0 >> 16) as u8,
+     userreg1 as u8, (userreg1 >> 8) as u8, (userreg1 >> 16) as u8]
+}

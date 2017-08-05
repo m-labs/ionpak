@@ -12,6 +12,11 @@ use cortex_m::exception::Handlers as ExceptionHandlers;
 use cortex_m::interrupt::Mutex;
 use tm4c129x::interrupt::Interrupt;
 use tm4c129x::interrupt::Handlers as InterruptHandlers;
+use smoltcp::Error;
+use smoltcp::wire::{EthernetAddress, IpAddress};
+use smoltcp::iface::{ArpCache, SliceArpCache, EthernetInterface};
+use smoltcp::socket::{AsSocket, SocketSet};
+use smoltcp::socket::{TcpSocket, TcpSocketBuffer};
 
 #[macro_export]
 macro_rules! print {
@@ -34,6 +39,8 @@ mod pid;
 mod loop_anode;
 mod loop_cathode;
 mod electrometer;
+mod http;
+mod pages;
 
 static TIME: Mutex<Cell<u64>> = Mutex::new(Cell::new(0));
 
@@ -66,6 +73,26 @@ impl fmt::Write for UART0 {
         }
         Ok(())
     }
+}
+
+const TCP_RX_BUFFER_SIZE: usize = 256;
+const TCP_TX_BUFFER_SIZE: usize = 8192;
+
+
+macro_rules! create_socket_storage {
+    ($rx_storage:ident, $tx_storage:ident) => (
+        let mut $rx_storage = [0; TCP_RX_BUFFER_SIZE];
+        let mut $tx_storage = [0; TCP_TX_BUFFER_SIZE];
+    )
+}
+
+macro_rules! create_socket {
+    ($set:ident, $rx_storage:ident, $tx_storage:ident, $target:ident) => (
+        let tcp_rx_buffer = TcpSocketBuffer::new(&mut $rx_storage[..]);
+        let tcp_tx_buffer = TcpSocketBuffer::new(&mut $tx_storage[..]);
+        let tcp_socket = TcpSocket::new(tcp_rx_buffer, tcp_tx_buffer);
+        let $target = $set.add(tcp_socket);
+    )
 }
 
 fn main() {
@@ -132,16 +159,94 @@ fn main_with_fpu() {
  |_|\___/|_| |_| .__/ \__,_|_|\_\
                | |
                |_|
-Ready."#);
+"#);
+
+    let hardware_addr = EthernetAddress(board::get_mac_address());
+    let mut protocol_addrs = [IpAddress::v4(192, 168, 69, 1)];
+    println!("MAC {} IP {}", hardware_addr, protocol_addrs[0]);
+    let mut arp_cache_entries: [_; 8] = Default::default();
+    let mut arp_cache = SliceArpCache::new(&mut arp_cache_entries[..]);
+    ethmac::init(hardware_addr.0);
+    let mut device = ethmac::EthernetDevice;
+    let mut iface = EthernetInterface::new(
+        &mut device, &mut arp_cache as &mut ArpCache,
+        hardware_addr, &mut protocol_addrs[..]);
+
+    create_socket_storage!(tcp_rx_storage0, tcp_tx_storage0);
+    create_socket_storage!(tcp_rx_storage1, tcp_tx_storage1);
+    create_socket_storage!(tcp_rx_storage2, tcp_tx_storage2);
+    create_socket_storage!(tcp_rx_storage3, tcp_tx_storage3);
+    create_socket_storage!(tcp_rx_storage4, tcp_tx_storage4);
+    create_socket_storage!(tcp_rx_storage5, tcp_tx_storage5);
+    create_socket_storage!(tcp_rx_storage6, tcp_tx_storage6);
+    create_socket_storage!(tcp_rx_storage7, tcp_tx_storage7);
+
+    let mut socket_set_entries: [_; 8] = Default::default();
+    let mut sockets = SocketSet::new(&mut socket_set_entries[..]);
+
+    create_socket!(sockets, tcp_rx_storage0, tcp_tx_storage0, tcp_handle0);
+    create_socket!(sockets, tcp_rx_storage1, tcp_tx_storage1, tcp_handle1);
+    create_socket!(sockets, tcp_rx_storage2, tcp_tx_storage2, tcp_handle2);
+    create_socket!(sockets, tcp_rx_storage3, tcp_tx_storage3, tcp_handle3);
+    create_socket!(sockets, tcp_rx_storage4, tcp_tx_storage4, tcp_handle4);
+    create_socket!(sockets, tcp_rx_storage5, tcp_tx_storage5, tcp_handle5);
+    create_socket!(sockets, tcp_rx_storage6, tcp_tx_storage6, tcp_handle6);
+    create_socket!(sockets, tcp_rx_storage7, tcp_tx_storage7, tcp_handle7);
+
+    let mut sessions = [
+        (http::Request::new(), tcp_handle0),
+        (http::Request::new(), tcp_handle1),
+        (http::Request::new(), tcp_handle2),
+        (http::Request::new(), tcp_handle3),
+        (http::Request::new(), tcp_handle4),
+        (http::Request::new(), tcp_handle5),
+        (http::Request::new(), tcp_handle6),
+        (http::Request::new(), tcp_handle7),
+    ];
 
     let mut next_blink = 0;
     let mut next_info = 0;
     let mut led_state = true;
     let mut latch_reset_time = None;
     loop {
-        board::process_errors();
-
         let time = get_time();
+
+        for &mut(ref mut request, ref tcp_handle) in sessions.iter_mut() {
+            let socket: &mut TcpSocket = sockets.get_mut(*tcp_handle).as_socket();
+            if !socket.is_open() {
+                socket.listen(80).unwrap()
+            }
+
+            if socket.may_recv() {
+                let request_status = {
+                    let data = socket.recv(TCP_RX_BUFFER_SIZE).unwrap();
+                    request.input(data)
+                };
+                match request_status {
+                    Ok(true) => {
+                        if socket.can_send() {
+                            pages::serve(socket, &request);
+                        }
+                        request.reset();
+                        socket.close();
+                    }
+                    Ok(false) => (),
+                    Err(err) => {
+                        println!("failed HTTP request: {}", err);
+                        request.reset();
+                        socket.close();
+                    }
+                }
+            } else if socket.may_send() {
+                request.reset();
+                socket.close();
+            }
+        }
+        let timestamp_ms = 0; // TODO
+        match iface.poll(&mut sockets, timestamp_ms) {
+            Ok(()) | Err(Error::Exhausted) => (),
+            Err(e) => println!("poll error: {}", e)
+        }
 
         if time > next_blink {
             led_state = !led_state;
@@ -170,6 +275,7 @@ Ready."#);
             next_info = next_info + 3000;
         }
 
+        board::process_errors();
         if board::error_latched() {
             match latch_reset_time {
                 None => {
