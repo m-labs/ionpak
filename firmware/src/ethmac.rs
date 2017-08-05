@@ -4,17 +4,17 @@ use tm4c129x;
 use core::slice;
 use smoltcp::Error;
 use smoltcp::phy::{DeviceLimits, Device};
-use smoltcp::wire::{EthernetAddress};
 
-const EPHY_BMCR: u8 =           0x00;  // Ethernet PHY Basic Mode Control
-const EPHY_BMSR: u8 =           0x01;  // Ethernet PHY Basic Mode Status
-const EPHY_ID1: u8 =            0x02;  // Ethernet PHY Identifier Register 1
-const EPHY_ID2: u8 =            0x03;  // Ethernet PHY Identifier Register 2
+const EPHY_BMCR: u8 =           0x00; // Ethernet PHY Basic Mode Control
+#[allow(dead_code)]
+const EPHY_BMSR: u8 =           0x01; // Ethernet PHY Basic Mode Status
+const EPHY_ID1: u8 =            0x02; // Ethernet PHY Identifier Register 1
+const EPHY_ID2: u8 =            0x03; // Ethernet PHY Identifier Register 2
 
-const EPHY_REGCTL: u8 =         0x0D;  // Ethernet PHY Register Control
-const EPHY_ADDAR: u8 =          0x0E;  // Ethernet PHY Address or Data
+const EPHY_REGCTL: u8 =         0x0D; // Ethernet PHY Register Control
+const EPHY_ADDAR: u8 =          0x0E; // Ethernet PHY Address or Data
 
-const EPHY_LEDCFG: u8 =         0x25;  // Ethernet PHY LED Configuration
+const EPHY_LEDCFG: u8 =         0x25; // Ethernet PHY LED Configuration
 
 // Transmit DMA descriptor flags
 const EMAC_TDES0_OWN: u32 =     0x80000000; // Indicates that the descriptor is owned by the DMA
@@ -60,8 +60,8 @@ static mut EMAC_DATA: EmacData = EmacData {
     rx_pkt_buf: [0; ETH_RX_BUFFER_COUNT * ETH_RX_BUFFER_SIZE],
 };
 
-pub fn delay(d: i32) {
-    for x in 0..d {
+fn delay(d: u32) {
+    for _ in 0..d {
         unsafe {
             asm!("
                 NOP
@@ -71,55 +71,59 @@ pub fn delay(d: i32) {
 }
 
 fn phy_read(reg_addr: u8) -> u16 {
-    unsafe {
-        let emac0 = tm4c129x::EMAC0.get();
+    cortex_m::interrupt::free(|cs| {
+        let emac0 = tm4c129x::EMAC0.borrow(cs);
 
         // Make sure the MII is idle
-        while (*emac0).miiaddr.read().miib().bit() {};
+        while emac0.miiaddr.read().miib().bit() {};
 
         // Tell the MAC to read the given PHY register
-        (*emac0).miiaddr.write(|w| {
-                w.cr()._100_150()
-                .mii().bits(reg_addr & 0x1F)
-                .miib().bit(true)
-        } );
+        unsafe {
+            emac0.miiaddr.write(|w| {
+                    w.cr()._100_150()
+                    .mii().bits(reg_addr & 0x1F)
+                    .miib().bit(true)
+            });
+        }
 
         // Wait for the read to complete
-        while (*emac0).miiaddr.read().miib().bit() {};
+        while emac0.miiaddr.read().miib().bit() {};
 
-        (*emac0).miidata.read().data().bits()
-    }
+        emac0.miidata.read().data().bits()
+    })
 }
 
 fn phy_write(reg_addr: u8, reg_data: u16) {
-    unsafe {
-        let emac0 = tm4c129x::EMAC0.get();
+    cortex_m::interrupt::free(|cs| {
+        let emac0 = tm4c129x::EMAC0.borrow(cs);
 
         // Make sure the MII is idle
-        while (*emac0).miiaddr.read().miib().bit() {};
+        while emac0.miiaddr.read().miib().bit() {};
 
-        (*emac0).miidata.write(|w| {
-            w.data().bits(reg_data)
-        } );
+        unsafe {
+            emac0.miidata.write(|w| {
+                w.data().bits(reg_data)
+            });
 
         // Tell the MAC to write the given PHY register
-        (*emac0).miiaddr.write(|w| {
-                w.cr()._100_150()
-                .mii().bits(reg_addr & 0x1F)
-                .miiw().bit(true)
-                .miib().bit(true)
-        } );
+            emac0.miiaddr.write(|w| {
+                    w.cr()._100_150()
+                    .mii().bits(reg_addr & 0x1F)
+                    .miiw().bit(true)
+                    .miib().bit(true)
+            });
+        }
 
         // Wait for the read to complete
-        while (*emac0).miiaddr.read().miib().bit() {};
-    }
+        while emac0.miiaddr.read().miib().bit() {};
+    })
 }
 
 // Writes a value to an extended PHY register in MMD address space
 fn phy_write_ext(reg_addr: u8, reg_data: u16) {
-    phy_write(EPHY_REGCTL, 0x001F);  // set address (datasheet page 1612)
+    phy_write(EPHY_REGCTL, 0x001F); // set address (datasheet page 1612)
     phy_write(EPHY_ADDAR, reg_addr as u16);
-    phy_write(EPHY_REGCTL, 0x401F);  // set write mode
+    phy_write(EPHY_REGCTL, 0x401F); // set write mode
     phy_write(EPHY_ADDAR, reg_data);
 }
 
@@ -149,7 +153,7 @@ pub fn init(mac_addr: [u8; 6]) {
         emac0.miiaddr.write(|w| w.cr()._100_150()); // Set the MII CSR clock speed.
 
         // Checking PHY
-        if  (phy_read(EPHY_ID1) != 0x2000) | (phy_read(EPHY_ID2) != 0xA221) {   // TM4C1294 PHY IDs
+        if  (phy_read(EPHY_ID1) != 0x2000) | (phy_read(EPHY_ID2) != 0xA221) {
             panic!("PHY ID error!");
         }
 
@@ -158,10 +162,10 @@ pub fn init(mac_addr: [u8; 6]) {
         while 1 == (phy_read(EPHY_BMCR) & 1) {}; // Wait for the reset to be completed
 
         // Configure PHY LEDs
-        phy_write_ext(EPHY_LEDCFG, 0x0008); //LED0 Link OK/Blink on TX/RX Activit
+        phy_write_ext(EPHY_LEDCFG, 0x0008); // LED0 Link OK/Blink on TX/RX Activity
 
         // Tell the PHY to start an auto-negotiation cycle
-        phy_write(EPHY_BMCR, 0b00010010_00000000);  //ANEN and RESTARTAN
+        phy_write(EPHY_BMCR, 0b00010010_00000000); // ANEN and RESTARTAN
 
         // Set the DMA operation mode
         emac0.dmaopmode.write(|w|
@@ -169,7 +173,7 @@ pub fn init(mac_addr: [u8; 6]) {
              .tsf().bit(true) // Transmit Store and Forward
              .ttc()._64() // Transmit Threshold Control
              .rtc()._64() // Receive Threshold Control
-    	);
+        );
 
         // Set the bus mode register.
         emac0.dmabusmod.write(|w| unsafe {
@@ -206,7 +210,7 @@ pub fn init(mac_addr: [u8; 6]) {
         // Set the low 4 bytes of the MAC address
         emac0.addr0l.write(|w| unsafe {
              w.addrlo().bits(mac_addr[0] as u32 | ((mac_addr[1] as u32) << 8) | ((mac_addr[2] as u32) << 16) | ((mac_addr[3] as u32) << 24))
-    	} );
+    	});
 
         // Set MAC filtering options (?)
         emac0.framefltr.write(|w|
@@ -216,8 +220,8 @@ pub fn init(mac_addr: [u8; 6]) {
     	);
 
         // Initialize hash table
-        emac0.hashtbll.write(|w| unsafe { w.htl().bits(0 as u32)});
-        emac0.hashtblh.write(|w| unsafe { w.hth().bits(0 as u32)});
+        emac0.hashtbll.write(|w| unsafe { w.htl().bits(0)});
+        emac0.hashtblh.write(|w| unsafe { w.hth().bits(0)});
         
         emac0.flowctl.write(|w| unsafe { w.bits(0)}); // Disable flow control ???
 
@@ -298,45 +302,13 @@ pub fn init(mac_addr: [u8; 6]) {
    });
 }
 
-pub fn info() {
-    unsafe {
-        static mut BMSR1: u16 = 0;
-        static mut R1: u32 = 0;
-
-        // Display EMAC status(es) if need
-        let emac0 = tm4c129x::EMAC0.get();
-//        let r = (*emac0).dmaris.read().bits();
-        let r = 0;
-        if R1 != r {
-            println!("R=0x{:08x}", r);
-        }
-        R1 = r;
-
-        // Display PHY/media status
-        let bmsr = phy_read(EPHY_BMSR);
-        if BMSR1 != bmsr {
-            println!("PHY BMSR=0x{:04x}", bmsr);
-        }
-        BMSR1 = bmsr;
-
-        // Display packets count
-        let rxp = EMAC_DATA.rx_counter;
-        EMAC_DATA.rx_counter = 0;
-        let txp = EMAC_DATA.tx_counter;
-        EMAC_DATA.tx_counter = 0;
-        if (0 != rxp) || (0 != txp) {
-            println!("RX_PKT={} TX_PKT={}", rxp, txp);
-        }
-    }
-}
-
 fn release_rx_buf() {
     unsafe {
         EMAC_DATA.rx_cur_desc += ETH_DESC_U32_SIZE;
         if EMAC_DATA.rx_cur_desc >= (ETH_RX_BUFFER_COUNT * ETH_DESC_U32_SIZE) {
             EMAC_DATA.rx_cur_desc = 0;
         }
-        EMAC_DATA.rx_desc_buf[EMAC_DATA.rx_cur_desc + 0] = EMAC_RDES0_OWN;  // release descriptor
+        EMAC_DATA.rx_desc_buf[EMAC_DATA.rx_cur_desc + 0] = EMAC_RDES0_OWN; // release descriptor
     }
 }
 
@@ -355,7 +327,7 @@ impl Device for EthernetDevice {
 
     fn receive(&mut self, _timestamp: u64) -> Result<Self::RxBuffer, Error> {
         unsafe {
-            if 0 == (EMAC_DATA.rx_desc_buf[EMAC_DATA.rx_cur_desc + 0] & EMAC_RDES0_OWN) {
+            if (EMAC_DATA.rx_desc_buf[EMAC_DATA.rx_cur_desc + 0] & EMAC_RDES0_OWN) == 0 {
                 // check for the whole packet in the buffer and no any error
                 if (EMAC_RDES0_FS | EMAC_RDES0_LS) == EMAC_DATA.rx_desc_buf[EMAC_DATA.rx_cur_desc + 0] & (EMAC_RDES0_FS | EMAC_RDES0_LS | EMAC_RDES0_ES) {
                     // Retrieve the length of the frame
@@ -363,14 +335,14 @@ impl Device for EthernetDevice {
                     // Limit the number of data to read
                     if n > ETH_RX_BUFFER_SIZE as u32 { n = ETH_RX_BUFFER_SIZE as u32; }
                     Ok(RxBuffer(slice::from_raw_parts(EMAC_DATA.rx_desc_buf[EMAC_DATA.rx_cur_desc + 2] as * mut u8,
-                        n as usize)))
+                                n as usize)))
                 } else {
                     // Ignore invalid frame
                     release_rx_buf();
                     Err(Error::Exhausted)
                 }
             } else {
-                Err(Error::Exhausted) // currently no bufferes to process
+                Err(Error::Exhausted) // currently no buffers to process
             }
         }
     }
@@ -378,15 +350,14 @@ impl Device for EthernetDevice {
     fn transmit(&mut self, _timestamp: u64, length: usize) -> Result<Self::TxBuffer, Error> {
         unsafe {
             // Check if the TX DMA buffer released
-            if 0 == (EMAC_DATA.tx_desc_buf[EMAC_DATA.tx_cur_desc + 0] & EMAC_TDES0_OWN) {
+            if (EMAC_DATA.tx_desc_buf[EMAC_DATA.tx_cur_desc + 0] & EMAC_TDES0_OWN) == 0 {
                 // Write the number of bytes to send
                 EMAC_DATA.tx_desc_buf[EMAC_DATA.tx_cur_desc + 1] = length as u32 & EMAC_TDES1_TBS1;
 
                 Ok(TxBuffer(slice::from_raw_parts_mut(EMAC_DATA.tx_desc_buf[EMAC_DATA.tx_cur_desc + 2] as * mut u8,
-                        ETH_TX_BUFFER_SIZE)))
+                                                      ETH_TX_BUFFER_SIZE)))
             } else {
                 // to do if need: Instruct the DMA to poll the receive descriptor list
-
                 Err(Error::Exhausted)
             }
         }
@@ -440,7 +411,7 @@ impl Drop for TxBuffer {
             }
             EMAC_DATA.tx_cur_desc = tx_next_desc;
 
-            EMAC_DATA.tx_counter += 1; // Increment RX statistics
+            EMAC_DATA.tx_counter += 1;
         }
     }
 }
