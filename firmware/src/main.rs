@@ -1,4 +1,4 @@
-#![feature(used, const_fn, core_float, asm)]
+#![feature(used, const_fn, core_float, asm, lang_items)]
 #![no_std]
 
 extern crate cortex_m;
@@ -28,6 +28,13 @@ macro_rules! print {
 macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+
+#[no_mangle]
+#[lang = "panic_fmt"]
+fn panic_fmt(args: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
+    println!("panic at {}:{}: {}", file, line, args);
+    loop {}
 }
 
 #[macro_use]
