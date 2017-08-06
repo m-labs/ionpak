@@ -281,8 +281,13 @@ pub fn init() {
              .pwm2en().bit(true)
              .pwm4en().bit(true)
         });
+    });
+}
 
-        // Set up ADC
+pub fn start_adc() {
+    cortex_m::interrupt::free(|cs| {
+        let sysctl = tm4c129x::SYSCTL.borrow(cs);
+
         let gpio_d = tm4c129x::GPIO_PORTD_AHB.borrow(cs);
         let gpio_e = tm4c129x::GPIO_PORTE_AHB.borrow(cs);
         gpio_d.afsel.write(|w| w.afsel().bits(FBV_ADC|AV_ADC));
@@ -318,6 +323,9 @@ pub fn init() {
         adc0.sac.write(|w| w.avg()._64x());
         adc0.ctl.write(|w| w.vref().bit(true));
         adc0.actss.write(|w| w.asen0().bit(true));
+
+        let nvic = tm4c129x::NVIC.borrow(cs);
+        nvic.enable(tm4c129x::Interrupt::ADC0SS0);
     });
 }
 

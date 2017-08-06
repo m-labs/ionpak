@@ -98,9 +98,6 @@ fn main() {
     board::init();
 
     cortex_m::interrupt::free(|cs| {
-        let nvic = tm4c129x::NVIC.borrow(cs);
-        nvic.enable(tm4c129x::Interrupt::ADC0SS0);
-
         let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
         let mut loop_cathode = LOOP_CATHODE.borrow(cs).borrow_mut();
 
@@ -181,6 +178,8 @@ fn main() {
         (http::Request::new(), tcp_handle6),
         (http::Request::new(), tcp_handle7),
     ];
+
+    board::start_adc();
 
     let mut next_blink = 0;
     let mut next_info = 0;
