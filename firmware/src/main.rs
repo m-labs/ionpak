@@ -53,7 +53,8 @@ fn get_time_ms() -> u64 {
     let adc_irq_count = cortex_m::interrupt::free(|cs| {
         ADC_IRQ_COUNT.borrow(cs).get()
     });
-    adc_irq_count*6/125
+    // FIXME: this should be adc_irq_count*6/125
+    adc_irq_count*4*6/125
 }
 
 static LOOP_ANODE: Mutex<RefCell<loop_anode::Controller>> = Mutex::new(RefCell::new(
