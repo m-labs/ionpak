@@ -4,13 +4,17 @@ version = "0.1.0"
 authors = ["whitequark <whitequark@whitequark.org>"]
 
 [dependencies]
-cortex-m = "0.2.5"
-cortex-m-rt = { version = "0.2.0", features = ["linker-script"], default-features = false }
-tm4c129x = { git = "https://github.com/m-labs/dslite2svd" }
+cortex-m = "0.3.1"
+cortex-m-rt = { version = "0.3.5", features = ["abort-on-panic"] }
+
+[dependencies.tm4c129x]
+git = "https://github.com/m-labs/dslite2svd"
+rev = "d527f3f"
+features = ["rt"]
 
 [dependencies.smoltcp]
 git = "https://github.com/m-labs/smoltcp"
-rev = "6bc6cc7"
+rev = "d03ea64"
 features = []
 default-features = false
 

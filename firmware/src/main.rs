@@ -3,15 +3,13 @@
 
 extern crate cortex_m;
 extern crate cortex_m_rt;
+#[macro_use(interrupt)]
 extern crate tm4c129x;
 extern crate smoltcp;
 
 use core::cell::{Cell, RefCell};
 use core::fmt;
-use cortex_m::exception::Handlers as ExceptionHandlers;
 use cortex_m::interrupt::Mutex;
-use tm4c129x::interrupt::Interrupt;
-use tm4c129x::interrupt::Handlers as InterruptHandlers;
 use smoltcp::Error;
 use smoltcp::wire::{EthernetAddress, IpAddress};
 use smoltcp::iface::{ArpCache, SliceArpCache, EthernetInterface};
@@ -97,31 +95,11 @@ macro_rules! create_socket {
 }
 
 fn main() {
-    // Enable the FPU
-    unsafe {
-        asm!("
-            PUSH {R0, R1}
-            LDR.W R0, =0xE000ED88
-            LDR R1, [R0]
-            ORR R1, R1, #(0xF << 20)
-            STR R1, [R0]
-            DSB
-            ISB
-            POP {R0, R1}
-        ");
-    }
-    // Beware of the compiler inserting FPU instructions
-    // in the prologue of functions before the FPU is enabled!
-    main_with_fpu();
-}
-
-#[inline(never)]
-fn main_with_fpu() {
     board::init();
 
     cortex_m::interrupt::free(|cs| {
         let nvic = tm4c129x::NVIC.borrow(cs);
-        nvic.enable(Interrupt::ADC0SS0);
+        nvic.enable(tm4c129x::Interrupt::ADC0SS0);
 
         let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
         let mut loop_cathode = LOOP_CATHODE.borrow(cs).borrow_mut();
@@ -298,8 +276,8 @@ fn main_with_fpu() {
     }
 }
 
-use tm4c129x::interrupt::ADC0SS0;
-extern fn adc0_ss0(_ctxt: ADC0SS0) {
+interrupt!(ADC0SS0, adc0_ss0);
+fn adc0_ss0() {
     cortex_m::interrupt::free(|cs| {
         let adc0 = tm4c129x::ADC0.borrow(cs);
         if adc0.ostat.read().ov0().bit() {
@@ -325,16 +303,3 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
         adc_irq_count.set(adc_irq_count.get() + 1);
     });
 }
-
-#[used]
-#[link_section = ".rodata.exceptions"]
-pub static EXCEPTIONS: ExceptionHandlers = ExceptionHandlers {
-    ..cortex_m::exception::DEFAULT_HANDLERS
-};
-
-#[used]
-#[link_section = ".rodata.interrupts"]
-pub static INTERRUPTS: InterruptHandlers = InterruptHandlers {
-    ADC0SS0: adc0_ss0,
-    ..tm4c129x::interrupt::DEFAULT_HANDLERS
-};
