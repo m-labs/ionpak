@@ -42,12 +42,13 @@ mod electrometer;
 mod http;
 mod pages;
 
-static TIME: Mutex<Cell<u64>> = Mutex::new(Cell::new(0));
+static ADC_IRQ_COUNT: Mutex<Cell<u64>> = Mutex::new(Cell::new(0));
 
-fn get_time() -> u64 {
-    cortex_m::interrupt::free(|cs| {
-        TIME.borrow(cs).get()
-    })
+fn get_time_ms() -> u64 {
+    let adc_irq_count = cortex_m::interrupt::free(|cs| {
+        ADC_IRQ_COUNT.borrow(cs).get()
+    });
+    adc_irq_count*6/125
 }
 
 static LOOP_ANODE: Mutex<RefCell<loop_anode::Controller>> = Mutex::new(RefCell::new(
@@ -208,7 +209,7 @@ fn main_with_fpu() {
     let mut led_state = true;
     let mut latch_reset_time = None;
     loop {
-        let time = get_time();
+        let time = get_time_ms();
 
         for &mut(ref mut request, ref tcp_handle) in sessions.iter_mut() {
             let socket: &mut TcpSocket = sockets.get_mut(*tcp_handle).as_socket();
@@ -241,15 +242,14 @@ fn main_with_fpu() {
                 socket.close();
             }
         }
-        let timestamp_ms = 0; // TODO
-        match iface.poll(&mut sockets, timestamp_ms) {
+        match iface.poll(&mut sockets, time) {
             Ok(()) | Err(Error::Exhausted) => (),
             Err(e) => println!("poll error: {}", e)
         }
 
         if time > next_blink {
             led_state = !led_state;
-            next_blink = time + 1000;
+            next_blink = time + 500;
             board::set_led(1, led_state);
         }
 
@@ -271,7 +271,7 @@ fn main_with_fpu() {
                 println!("{:.1e} mbar", pressure);
             }
 
-            next_info = next_info + 3000;
+            next_info = next_info + 1000;
         }
 
         board::process_errors();
@@ -279,7 +279,7 @@ fn main_with_fpu() {
             match latch_reset_time {
                 None => {
                     println!("Protection latched");
-                    latch_reset_time = Some(time + 10000);
+                    latch_reset_time = Some(time + 5000);
                 }
                 Some(t) => if time > t {
                     latch_reset_time = None;
@@ -321,8 +321,8 @@ extern fn adc0_ss0(_ctxt: ADC0SS0) {
         loop_cathode.adc_input(fbi_sample, fd_sample, fv_sample, fbv_sample);
         electrometer.adc_input(ic_sample);
 
-        let time = TIME.borrow(cs);
-        time.set(time.get() + 1);
+        let adc_irq_count = ADC_IRQ_COUNT.borrow(cs);
+        adc_irq_count.set(adc_irq_count.get() + 1);
     });
 }
 
