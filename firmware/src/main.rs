@@ -137,7 +137,8 @@ fn main() {
                |_|
 "#);
 
-    let hardware_addr = EthernetAddress(board::get_mac_address());
+    //let hardware_addr = EthernetAddress(board::get_mac_address());
+    let hardware_addr = EthernetAddress([0x10, 0xE2, 0xD5, 0x22, 0x23, 0x12]);
     let mut protocol_addrs = [IpAddress::v4(192, 168, 69, 1)];
     println!("MAC {} IP {}", hardware_addr, protocol_addrs[0]);
     let mut arp_cache_entries: [_; 8] = Default::default();
