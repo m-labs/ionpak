@@ -40,6 +40,8 @@ pub fn panic_fmt(args: core::fmt::Arguments, file: &'static str, line: u32) -> !
 #[macro_use]
 mod board;
 mod eeprom;
+mod crc32;
+mod config;
 mod ethmac;
 mod pid;
 mod loop_anode;
@@ -104,6 +106,10 @@ macro_rules! create_socket {
 
 fn main() {
     board::init();
+
+    let mut config = config::Config::new();
+    eeprom::init();
+    config.load();
 
     cortex_m::interrupt::free(|cs| {
         let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
