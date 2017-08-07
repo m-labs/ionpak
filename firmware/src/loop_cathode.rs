@@ -30,6 +30,7 @@ pub struct Controller {
     fbi_buffer_count: usize,
     last_fbi: Option<f32>,
     fbi_pid: pid::Controller,
+    last_fv_target: Option<f32>,
 
     fv_pid: pid::Controller,
     last_fv: Option<f32>,
@@ -42,6 +43,7 @@ pub struct Controller {
 pub struct ControllerStatus {
     pub ready: bool,
     pub fbi: Option<f32>,
+    pub fv_target: Option<f32>,
     pub fv: Option<f32>,
     pub fbv: Option<f32>
 }
@@ -55,6 +57,7 @@ impl Controller {
             fbi_buffer_count: 0,
             last_fbi: None,
             fbi_pid: pid::Controller::new(FBI_PID_PARAMETERS),
+            last_fv_target: None,
 
             fv_pid: pid::Controller::new(FV_PID_PARAMETERS),
             last_fv: None,
@@ -90,6 +93,7 @@ impl Controller {
         }
 
         let fv_target = self.fbi_pid.update(fbi);
+        self.last_fv_target = Some(fv_target);
         self.fv_pid.set_target(fv_target);
 
         let fv = fv_sample as f32/board::FV_ADC_GAIN;
@@ -135,6 +139,7 @@ impl Controller {
     pub fn reset(&mut self) {
         self.fbi_pid.reset();
         self.fv_pid.reset();
+        self.last_fv_target = None;
         self.fbi_buffer_count = 0;
         self.last_fbi = None;
         self.last_fv = None;
@@ -145,6 +150,7 @@ impl Controller {
         ControllerStatus {
             ready: self.emission_ready() & self.bias_ready(),
             fbi: self.last_fbi,
+            fv_target: self.last_fv_target,
             fv: self.last_fv,
             fbv: self.last_fbv
         }
