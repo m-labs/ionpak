@@ -338,3 +338,13 @@ pub fn get_mac_address() -> [u8; 6] {
     [userreg0 as u8, (userreg0 >> 8) as u8, (userreg0 >> 16) as u8,
      userreg1 as u8, (userreg1 >> 8) as u8, (userreg1 >> 16) as u8]
 }
+
+pub fn delay(d: u32) {
+    for _ in 0..d {
+        unsafe {
+            asm!("
+                NOP
+            ");
+        }
+    }
+}

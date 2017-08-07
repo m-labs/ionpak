@@ -39,6 +39,7 @@ pub fn panic_fmt(args: core::fmt::Arguments, file: &'static str, line: u32) -> !
 
 #[macro_use]
 mod board;
+mod eeprom;
 mod ethmac;
 mod pid;
 mod loop_anode;

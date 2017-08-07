@@ -1,10 +1,11 @@
+use core::slice;
 use cortex_m;
 use tm4c129x;
-
-use core::slice;
 use smoltcp::Error;
 use smoltcp::wire::EthernetAddress;
 use smoltcp::phy::{DeviceLimits, Device};
+
+use board;
 
 const EPHY_BMCR: u8 =           0x00; // Ethernet PHY Basic Mode Control
 #[allow(dead_code)]
@@ -38,16 +39,6 @@ const ETH_TX_BUFFER_COUNT: usize =  2;
 const ETH_TX_BUFFER_SIZE: usize =   1536;
 const ETH_RX_BUFFER_COUNT: usize =  3;
 const ETH_RX_BUFFER_SIZE: usize =   1536;
-
-fn delay(d: u32) {
-    for _ in 0..d {
-        unsafe {
-            asm!("
-                NOP
-            ");
-        }
-    }
-}
 
 fn phy_read(reg_addr: u8) -> u16 {
     cortex_m::interrupt::free(|cs| {
@@ -189,21 +180,21 @@ impl EthernetDevice {
 
             sysctl.rcgcemac.modify(|_, w| w.r0().bit(true)); // Bring up MAC
             sysctl.sremac.modify(|_, w| w.r0().bit(true)); // Activate MAC reset
-            delay(16);
+            board::delay(16);
             sysctl.sremac.modify(|_, w| w.r0().bit(false)); // Dectivate MAC reset
 
             sysctl.rcgcephy.modify(|_, w| w.r0().bit(true)); // Bring up PHY
             sysctl.srephy.modify(|_, w| w.r0().bit(true)); // Activate PHY reset
-            delay(16);
+            board::delay(16);
             sysctl.srephy.modify(|_, w| w.r0().bit(false)); // Dectivate PHY reset
 
             while !sysctl.premac.read().r0().bit() {} // Wait for the MAC to come out of reset
             while !sysctl.prephy.read().r0().bit() {} // Wait for the PHY to come out of reset
-            delay(10000);
+            board::delay(10000);
 
             emac0.dmabusmod.modify(|_, w| w.swr().bit(true)); // Reset MAC DMA
             while emac0.dmabusmod.read().swr().bit() {} // Wait for the MAC DMA to come out of reset
-            delay(1000);
+            board::delay(1000);
 
             emac0.miiaddr.write(|w| w.cr()._100_150()); // Set the MII CSR clock speed.
 
