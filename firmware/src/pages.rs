@@ -61,6 +61,11 @@ pub fn serve(output: &mut TcpSocket, request: &http::Request,
                 cathode_fbv=OpnFmt(cathode.fbv),
                 ion_current=OpnFmt(electrometer.ic.and_then(|x| Some(x*1.0e9)))).unwrap();
         },
+        b"/firmware.html" => {
+            http::write_reply_header(output, 200, "text/html; charset=utf-8", false).unwrap();
+            write!(output, include_str!("firmware.html"),
+                   version=include_str!(concat!(env!("OUT_DIR"), "/git-describe"))).unwrap();
+        }
         b"/style.css" => {
             let data = include_bytes!("style.css.gz");
             http::write_reply_header(output, 200, "text/css", true).unwrap();

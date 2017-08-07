@@ -1,7 +1,10 @@
 [package]
 name = "ionpak-firmware"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["whitequark <whitequark@whitequark.org>"]
+
+[build-dependencies]
+walkdir = "1.0"
 
 [dependencies]
 cortex-m = "0.3.1"
