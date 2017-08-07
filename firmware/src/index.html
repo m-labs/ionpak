@@ -21,13 +21,25 @@
 </div>
 
 <div class="w3-container">
-<p>Pressure:</p>
+<h3>Pressure</h3>
+<div class="w3-card w3-xxlarge">
+{pressure:.1e} mbar
 </div>
-<div class="w3-container w3-xxlarge">
-2.3×10<sup>-7</sup> mbar
 </div>
 
 <div class="w3-container">
+  <h3>Details</h3>
+  <table class="w3-table">
+    <tr><th>Parameter</th><th>Current</th><th>Target</th></tr>
+    <tr><td>Anode regulator ready</td><td>{anode_ready}</td></tr>
+    <tr><td>Anode voltage</td><td>{anode_av:.1}V</td></tr>
+    <tr><td>Cathode regulator ready</td><td>{cathode_ready}</td></tr>
+    <tr><td>Electron current</td><td>{cathode_fbi:.0}μA</td></tr>
+    <tr><td>Filament voltage</td><td>{cathode_fv:.2}V</td><td>{cathode_fv_target:.2}V</td></tr>
+    <tr><td>Cathode bias</td><td>{cathode_fbv:.1}V</td></tr>
+    <tr><td>Ion current</td><td>{ion_current:.5}nA</td></tr>
+  </table>
+
 <p>
 At local time:
 <script language="Javascript">

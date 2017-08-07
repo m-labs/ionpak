@@ -32,7 +32,7 @@ macro_rules! println {
 
 #[no_mangle]
 #[lang = "panic_fmt"]
-fn panic_fmt(args: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
+pub fn panic_fmt(args: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
     println!("panic at {}:{}: {}", file, line, args);
     loop {}
 }
@@ -191,7 +191,6 @@ fn main() {
     board::start_adc();
 
     let mut next_blink = 0;
-    let mut next_info = 0;
     let mut led_state = true;
     let mut latch_reset_time = None;
     loop {
@@ -211,7 +210,7 @@ fn main() {
                 match request_status {
                     Ok(true) => {
                         if socket.can_send() {
-                            pages::serve(socket, &request);
+                            pages::serve(socket, &request, &LOOP_ANODE, &LOOP_CATHODE, &ELECTROMETER);
                         }
                         request.reset();
                         socket.close();
@@ -237,27 +236,6 @@ fn main() {
             led_state = !led_state;
             next_blink = time + 500;
             board::set_led(1, led_state);
-        }
-
-        if time >= next_info {
-            let (anode, cathode, electrometer) = cortex_m::interrupt::free(|cs| {
-                (LOOP_ANODE.borrow(cs).borrow().get_status(),
-                 LOOP_CATHODE.borrow(cs).borrow().get_status(),
-                 ELECTROMETER.borrow(cs).borrow().get_status())
-            });
-
-            println!("");
-            anode.debug_print();
-            cathode.debug_print();
-            electrometer.debug_print();
-            if cathode.fbi.is_some() && electrometer.ic.is_some() {
-                let fbi = cathode.fbi.unwrap();
-                let ic = electrometer.ic.unwrap();
-                let pressure = ic/fbi/18.75154;
-                println!("{:.1e} mbar", pressure);
-            }
-
-            next_info = next_info + 1000;
         }
 
         board::process_errors();

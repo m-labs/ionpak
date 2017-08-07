@@ -157,18 +157,3 @@ impl Controller {
     }
 
 }
-
-impl ControllerStatus {
-    pub fn debug_print(&self) {
-        println!("cathode rdy: {}", self.ready);
-        if self.fbi.is_some() {
-            println!("emi: {}mA", 1000.0*self.fbi.unwrap());
-        }
-        if self.fv.is_some() {
-            println!("fil: {}V", self.fv.unwrap());
-        }
-        if self.fbv.is_some() {
-            println!("bias: {}V", self.fbv.unwrap());
-        }
-    }
-}

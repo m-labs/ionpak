@@ -85,11 +85,3 @@ impl Electrometer {
         }
     }
 }
-
-impl ElectrometerStatus {
-    pub fn debug_print(&self) {
-        if self.ic.is_some() {
-            println!("ion: {}nA", 1e9*self.ic.unwrap());
-        }
-    }
-}

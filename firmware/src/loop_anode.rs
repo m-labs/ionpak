@@ -67,12 +67,3 @@ impl Controller {
         }
     }
 }
-
-impl ControllerStatus {
-    pub fn debug_print(&self) {
-        println!("anode rdy: {}", self.ready);
-        if self.av.is_some() {
-            println!("voltage: {}V", self.av.unwrap());
-        }
-    }
-}
