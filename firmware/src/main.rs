@@ -239,7 +239,7 @@ fn main() {
         if time > next_blink {
             led_state = !led_state;
             next_blink = time + 500;
-            board::set_led(1, led_state);
+            board::set_led(led_state);
         }
 
         board::process_errors();

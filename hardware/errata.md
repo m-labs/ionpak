@@ -35,3 +35,5 @@ Rev 1
 * add 15M (TBC) resistor between A and FIL-
 * power U200 from a small negative voltage instead of GND
 * review choice of filament flyback output diode
+* invert LED position so that the Ethernet LED is closest to the connector
+* invert polarity of LEDs (Ethernet LED polarity cannot be programmed)

@@ -2,8 +2,8 @@ use cortex_m;
 use tm4c129x;
 
 
-const LED1: u8 = 0x10; // PF1
-const LED2: u8 = 0x40; // PF3
+const LED1: u8 = 0x10; // PK4
+const LED2: u8 = 0x40; // PK6
 
 const HV_PWM: u8 = 0x01;  // PF0
 const FV_PWM: u8 = 0x04;  // PF2
@@ -46,18 +46,13 @@ pub const FBI_R224: f32 = 39.0;
 pub const FBI_R225: f32 = 22000.0;
 
 
-pub fn set_led(nr: u8, state: bool) {
-    let bit = match nr {
-        1 => LED1,
-        2 => LED2,
-        _ => panic!("unknown LED")
-    };
+pub fn set_led(state: bool) {
     cortex_m::interrupt::free(|cs| {
         let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
         if state {
-            gpio_k.data.modify(|r, w| w.data().bits(r.data().bits() | bit))
+            gpio_k.data.modify(|r, w| w.data().bits(r.data().bits() | LED2))
         } else {
-            gpio_k.data.modify(|r, w| w.data().bits(r.data().bits() & !bit))
+            gpio_k.data.modify(|r, w| w.data().bits(r.data().bits() & !LED2))
         }
     });
 }
@@ -226,6 +221,9 @@ pub fn init() {
         let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
         gpio_k.dir.write(|w| w.dir().bits(LED1|LED2));
         gpio_k.den.write(|w| w.den().bits(LED1|LED2));
+        // Switch LED1 to LAN mode
+        gpio_k.afsel.modify(|_, w| w.afsel().bits(LED1));
+        gpio_k.pctl.modify(|_, w| unsafe { w.pmc4().bits(5) }); // EN0LED0
 
         // Set up gain and emission range control pins
         let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
