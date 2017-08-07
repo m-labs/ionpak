@@ -118,8 +118,8 @@ pub struct EthernetDevice {
 }
 
 impl EthernetDevice {
-    pub fn new(mac_addr: EthernetAddress) -> EthernetDevice {
-        let mut device = EthernetDevice {
+    pub fn new() -> EthernetDevice {
+        EthernetDevice {
             tx_desc_buf: [0; ETH_TX_BUFFER_COUNT * ETH_DESC_U32_SIZE],
             rx_desc_buf: [0; ETH_RX_BUFFER_COUNT * ETH_DESC_U32_SIZE],
             tx_cur_desc: 0,
@@ -128,31 +128,33 @@ impl EthernetDevice {
             rx_counter: 0,
             tx_pkt_buf: [0; ETH_TX_BUFFER_COUNT * ETH_TX_BUFFER_SIZE],
             rx_pkt_buf: [0; ETH_RX_BUFFER_COUNT * ETH_RX_BUFFER_SIZE],
-        };
+        }
+    }
 
+    pub fn init(&mut self, mac_addr: EthernetAddress) {
         // Initialize TX DMA descriptors
         for x in 0..ETH_TX_BUFFER_COUNT {
             let p = x * ETH_DESC_U32_SIZE;
             let r = x * ETH_TX_BUFFER_SIZE;
 
             // Initialize transmit flags
-            device.tx_desc_buf[p + 0] = 0;
+            self.tx_desc_buf[p + 0] = 0;
             // Initialize transmit buffer size
-            device.tx_desc_buf[p + 1] = 0;
+            self.tx_desc_buf[p + 1] = 0;
             // Transmit buffer address
-            device.tx_desc_buf[p + 2] = (&device.tx_pkt_buf[r] as *const u8) as u32;
+            self.tx_desc_buf[p + 2] = (&self.tx_pkt_buf[r] as *const u8) as u32;
             // Next descriptor address
             if x != ETH_TX_BUFFER_COUNT - 1 {
-                device.tx_desc_buf[p + 3] = (&device.tx_desc_buf[p + ETH_DESC_U32_SIZE] as *const u32) as u32;
+                self.tx_desc_buf[p + 3] = (&self.tx_desc_buf[p + ETH_DESC_U32_SIZE] as *const u32) as u32;
             } else {
-                device.tx_desc_buf[p + 3] = (&device.tx_desc_buf[0] as *const u32) as u32;
+                self.tx_desc_buf[p + 3] = (&self.tx_desc_buf[0] as *const u32) as u32;
             }
             // Reserved fields
-            device.tx_desc_buf[p + 4] = 0;
-            device.tx_desc_buf[p + 5] = 0;
+            self.tx_desc_buf[p + 4] = 0;
+            self.tx_desc_buf[p + 5] = 0;
             // Transmit frame time stamp
-            device.tx_desc_buf[p + 6] = 0;
-            device.tx_desc_buf[p + 7] = 0;
+            self.tx_desc_buf[p + 6] = 0;
+            self.tx_desc_buf[p + 7] = 0;
         }
 
         // Initialize RX DMA descriptors
@@ -161,24 +163,24 @@ impl EthernetDevice {
             let r = x * ETH_RX_BUFFER_SIZE;
 
             // The descriptor is initially owned by the DMA
-            device.rx_desc_buf[p + 0] = EMAC_RDES0_OWN;
+            self.rx_desc_buf[p + 0] = EMAC_RDES0_OWN;
             // Use chain structure rather than ring structure
-            device.rx_desc_buf[p + 1] = EMAC_RDES1_RCH  | ((ETH_RX_BUFFER_SIZE as u32) & EMAC_RDES1_RBS1);
+            self.rx_desc_buf[p + 1] = EMAC_RDES1_RCH  | ((ETH_RX_BUFFER_SIZE as u32) & EMAC_RDES1_RBS1);
             // Receive buffer address
-            device.rx_desc_buf[p + 2] = (&device.rx_pkt_buf[r] as *const u8) as u32;
+            self.rx_desc_buf[p + 2] = (&self.rx_pkt_buf[r] as *const u8) as u32;
             // Next descriptor address
             if x != ETH_RX_BUFFER_COUNT - 1 {
-                device.rx_desc_buf[p + 3] = (&device.rx_desc_buf[p + ETH_DESC_U32_SIZE] as *const u32) as u32;
+                self.rx_desc_buf[p + 3] = (&self.rx_desc_buf[p + ETH_DESC_U32_SIZE] as *const u32) as u32;
             } else {
-                device.rx_desc_buf[p + 3] = (&device.rx_desc_buf[0] as *const u32) as u32;
+                self.rx_desc_buf[p + 3] = (&self.rx_desc_buf[0] as *const u32) as u32;
             }
             // Extended status
-            device.rx_desc_buf[p + 4] = 0;
+            self.rx_desc_buf[p + 4] = 0;
             // Reserved field
-            device.rx_desc_buf[p + 5] = 0;
+            self.rx_desc_buf[p + 5] = 0;
             // Transmit frame time stamp
-            device.rx_desc_buf[p + 6] = 0;
-            device.rx_desc_buf[p + 7] = 0;
+            self.rx_desc_buf[p + 6] = 0;
+            self.rx_desc_buf[p + 7] = 0;
         }
 
         cortex_m::interrupt::free(|cs| {
@@ -277,8 +279,8 @@ impl EthernetDevice {
 
             emac0.flowctl.write(|w| unsafe { w.bits(0)}); // Disable flow control ???
 
-            emac0.txdladdr.write(|w| unsafe { w.bits((&device.tx_desc_buf[0] as *const u32) as u32)});
-            emac0.rxdladdr.write(|w| unsafe { w.bits((&device.rx_desc_buf[0] as *const u32) as u32)});
+            emac0.txdladdr.write(|w| unsafe { w.bits((&self.tx_desc_buf[0] as *const u32) as u32)});
+            emac0.rxdladdr.write(|w| unsafe { w.bits((&self.rx_desc_buf[0] as *const u32) as u32)});
 
             // Manage MAC transmission and reception
             emac0.cfg.modify(|_, w|
@@ -292,7 +294,6 @@ impl EthernetDevice {
                 .st().bit(true) // Start Transmit
             );
         });
-        device
     }
 
     fn release_rx_buf(&mut self) {
