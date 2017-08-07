@@ -346,7 +346,7 @@ impl Device for EthernetDevice {
 
             let sl = unsafe {
                 slice::from_raw_parts_mut(self.tx_desc_buf[self.tx_cur_desc + 2] as * mut u8,
-                                          ETH_TX_BUFFER_SIZE)
+                                          length)
             };
             Ok(TxBuffer(sl, self))
         } else {
