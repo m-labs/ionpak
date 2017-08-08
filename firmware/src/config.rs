@@ -21,9 +21,10 @@ impl EepromReader {
         if self.buffer[0] != MAGIC {
             return false;
         }
-        let cksum = self.buffer[0] as u32 | (self.buffer[1] as u32) << 8 |
-                   (self.buffer[2] as u32) << 16 | (self.buffer[3] as u32) << 24;
-        if crc32::checksum_ieee(&self.buffer[0..self.buffer.len()-4]) != cksum {
+        let len = self.buffer.len();
+        let cksum = self.buffer[len-4] as u32 | (self.buffer[len-3] as u32) << 8 |
+                   (self.buffer[len-2] as u32) << 16 | (self.buffer[len-1] as u32) << 24;
+        if crc32::checksum_ieee(&self.buffer[0..len-4]) != cksum {
             return false;
         }
         true
@@ -83,5 +84,6 @@ impl Config {
             _ => panic!("unsupported network address")
         };
         payload[0..4].copy_from_slice(&ip4);
+        write_eeprom_payload(&payload);
     }
 }
