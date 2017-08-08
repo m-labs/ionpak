@@ -50,10 +50,29 @@ For baked systems, use PTFE insulated cables that can withstand 200°C. Operatin
 
 It is a good idea to attach the cables to the vacuum system with a strap to avoid damaging the gauge by accidentally pulling on the cables, and to place a cover onto the pins to reduce the electrical shock hazard from the high voltage. Preferably those items should be made of metal so that they can be left on during bakeout.
 
+Using the ionpak
+----------------
+
+The ionpak has a static IP address that defaults to `192.168.69.1`. It has a self-explanatory web interface that you can access by pointing your browser to [http://192.168.69.1](http://192.168.69.1). By default, the controller is disabled and the ionpak will not produce any output voltages; use the web interface to input your gauge settings and enable the controller.
+
+The IP address, along with all the other configuration options, can be reset to the defaults by holding the pushbutton while the ionpak is powering up. The status LED will flash rapidly to acknowledge the configuration reset.
+
+In addition to displaying its measurement results in the web interface, the ionpak exports them in the JSON format. The results are very straightforward to access from Python:
+
+```
+>>> import requests
+>>> import json
+>>> json.loads(requests.get("http://192.168.69.1/measure.json").text)
+{'pressure': 3.8e-06, 'current': 3.357e-08}
+```
+
+In the JSON document, `pressure` is expressed in millibars and `current` (through the collector input) is expressed in amperes.
+
 Warning
 -------
 
 Ionization gauges use dangerous voltages and the ionpak is capable of delivering a lethal amount of power. Be careful and use at your own risk.
+
 
 Building and loading the firmware
 ---------------------------------
