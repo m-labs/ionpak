@@ -22,6 +22,7 @@ const FBI_ERRN: u8 = 0x04;   // PL2
 const AV_ERRN: u8 = 0x08;    // PL3
 const AI_ERRN: u8 = 0x10;    // PL4
 const ERR_LATCHN: u8 = 0x20; // PL5
+const BTNN: u8 = 0x80;       // PL7
 const ERR_RESN: u8 = 0x01;   // PQ0
 
 const PWM_LOAD: u16 = (/*pwmclk*/120_000_000u32 / /*freq*/100_000) as u16;
@@ -55,6 +56,14 @@ pub fn set_led(state: bool) {
             gpio_k.data.modify(|r, w| w.data().bits(r.data().bits() & !LED2))
         }
     });
+}
+
+pub fn get_button() -> bool {
+    let gpio_dat = cortex_m::interrupt::free(|cs| {
+        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+        gpio_l.data.read().bits() as u8
+    });
+    gpio_dat & BTNN == 0
 }
 
 pub fn set_hv_pwm(duty: u16) {
@@ -136,23 +145,23 @@ pub fn error_latched() -> bool {
 }
 
 pub fn process_errors() {
-    let errors_n = cortex_m::interrupt::free(|cs| {
+    let gpio_dat = cortex_m::interrupt::free(|cs| {
         let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
         gpio_l.data.read().bits() as u8
     });
-    if errors_n & FV_ERRN == 0 {
+    if gpio_dat & FV_ERRN == 0 {
         println!("Filament overvolt");
     }
-    if errors_n & FBV_ERRN == 0 {
+    if gpio_dat & FBV_ERRN == 0 {
         println!("Filament bias overvolt");
     }
-    if errors_n & FBI_ERRN == 0 {
+    if gpio_dat & FBI_ERRN == 0 {
         println!("Filament bias overcurrent");
     }
-    if errors_n & AV_ERRN == 0 {
+    if gpio_dat & AV_ERRN == 0 {
         println!("Anode overvolt");
     }
-    if errors_n & AI_ERRN == 0 {
+    if gpio_dat & AI_ERRN == 0 {
         println!("Anode overcurrent");
     }
 }
@@ -232,11 +241,11 @@ pub fn init() {
         set_emission_range(EmissionRange::Med);
         set_electrometer_range(ElectrometerRange::Med);
 
-        // Set up error pins
+        // Set up error and pushbutton pins
         let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
         let gpio_q = tm4c129x::GPIO_PORTQ.borrow(cs);
-        gpio_l.pur.write(|w| w.pue().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN));
-        gpio_l.den.write(|w| w.den().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN|ERR_LATCHN));
+        gpio_l.pur.write(|w| w.pue().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN|BTNN));
+        gpio_l.den.write(|w| w.den().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN|ERR_LATCHN|BTNN));
         gpio_q.dir.write(|w| w.dir().bits(ERR_RESN));
         gpio_q.den.write(|w| w.den().bits(ERR_RESN));
         reset_error(); // error latch is an undefined state upon power-up; reset it

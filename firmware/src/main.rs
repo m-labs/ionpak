@@ -106,10 +106,15 @@ macro_rules! create_socket {
 
 fn main() {
     board::init();
+    let button_pressed = board::get_button();
 
     let mut config = config::Config::new();
     eeprom::init();
-    config.load();
+    if button_pressed {
+        config.save();
+    } else {
+        config.load();
+    }
 
     cortex_m::interrupt::free(|cs| {
         let mut loop_anode = LOOP_ANODE.borrow(cs).borrow_mut();
@@ -200,6 +205,7 @@ fn main() {
 
     board::start_adc();
 
+    let mut fast_blink_count = if button_pressed { 40 } else { 0 };
     let mut next_blink = 0;
     let mut led_state = true;
     let mut latch_reset_time = None;
@@ -244,7 +250,12 @@ fn main() {
 
         if time > next_blink {
             led_state = !led_state;
-            next_blink = time + 500;
+            if fast_blink_count > 0 {
+                fast_blink_count -= 1;
+                next_blink = time + 100;
+            } else {
+                next_blink = time + 500;
+            }
             board::set_led(led_state);
         }
 
