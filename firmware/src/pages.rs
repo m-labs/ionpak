@@ -1,11 +1,13 @@
 use core::fmt;
 use core::fmt::Write;
 use core::cell::RefCell;
+use core::str;
 use cortex_m;
 use cortex_m::interrupt::Mutex;
 use smoltcp::socket::TcpSocket;
 
 use http;
+use config;
 use loop_anode;
 use loop_cathode;
 use electrometer;
@@ -31,6 +33,7 @@ impl fmt::LowerExp for OpnFmt {
 }
 
 pub fn serve(output: &mut TcpSocket, request: &http::Request,
+             config: &mut config::Config,
              loop_anode_m: &Mutex<RefCell<loop_anode::Controller>>,
              loop_cathode_m: &Mutex<RefCell<loop_cathode::Controller>>,
              electrometer_m: &Mutex<RefCell<electrometer::Electrometer>>) {
@@ -60,6 +63,31 @@ pub fn serve(output: &mut TcpSocket, request: &http::Request,
                 cathode_fv_target=OpnFmt(cathode.fv_target),
                 cathode_fbv=OpnFmt(cathode.fbv),
                 ion_current=OpnFmt(electrometer.ic.and_then(|x| Some(x*1.0e9)))).unwrap();
+        },
+        b"/network_settings.html" => {
+            let mut status = "";
+
+            let ip_arg = request.get_arg(b"ip");
+            if ip_arg.is_ok() {
+                let ip_arg = str::from_utf8(ip_arg.unwrap());
+                if ip_arg.is_ok() {
+                    let ip = ip_arg.unwrap().parse();
+                    if ip.is_ok() {
+                        let ip = ip.unwrap();
+                        status = "IP address has been updated and will be active after a reboot.";
+                        config.ip = ip;
+                        config.save();
+                    } else {
+                        status = "failed to parse IP address";
+                    }
+                } else {
+                    status = "IP address contains an invalid UTF-8 character";
+                }
+            }
+
+            http::write_reply_header(output, 200, "text/html; charset=utf-8", false).unwrap();
+            write!(output, include_str!("network_settings.html"),
+                   status=status, ip=config.ip).unwrap();
         },
         b"/firmware.html" => {
             http::write_reply_header(output, 200, "text/html; charset=utf-8", false).unwrap();

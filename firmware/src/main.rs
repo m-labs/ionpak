@@ -11,7 +11,7 @@ use core::cell::{Cell, RefCell};
 use core::fmt;
 use cortex_m::interrupt::Mutex;
 use smoltcp::Error;
-use smoltcp::wire::{EthernetAddress, IpAddress};
+use smoltcp::wire::EthernetAddress;
 use smoltcp::iface::{ArpCache, SliceArpCache, EthernetInterface};
 use smoltcp::socket::{AsSocket, SocketSet};
 use smoltcp::socket::{TcpSocket, TcpSocketBuffer};
@@ -156,7 +156,7 @@ fn main() {
         println!("programmed MAC address is invalid, using default");
         hardware_addr = EthernetAddress([0x10, 0xE2, 0xD5, 0x00, 0x03, 0x00]);
     }
-    let mut protocol_addrs = [IpAddress::v4(192, 168, 69, 1)];
+    let mut protocol_addrs = [config.ip];
     println!("MAC {} IP {}", hardware_addr, protocol_addrs[0]);
     let mut arp_cache_entries: [_; 8] = Default::default();
     let mut arp_cache = SliceArpCache::new(&mut arp_cache_entries[..]);
@@ -220,7 +220,7 @@ fn main() {
                 match request_status {
                     Ok(true) => {
                         if socket.can_send() {
-                            pages::serve(socket, &request, &LOOP_ANODE, &LOOP_CATHODE, &ELECTROMETER);
+                            pages::serve(socket, &request, &mut config, &LOOP_ANODE, &LOOP_CATHODE, &ELECTROMETER);
                         }
                         request.reset();
                         socket.close();

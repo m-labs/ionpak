@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<title>ionpak</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<body>
+
+<div class="w3-sidebar w3-light-grey w3-bar-block" style="width:15%">
+  <h3 class="w3-bar-item"><img src="logo.svg"></h3>
+  <a href="/" class="w3-bar-item w3-button">Measure</a>
+  <a href="/gauge_settings.html" class="w3-bar-item w3-button">Gauge settings</a>
+  <a href="/network_settings.html" class="w3-bar-item w3-button">Network settings</a>
+  <a href="/firmware.html" class="w3-bar-item w3-button">Firmware</a>
+</div>
+
+<div style="margin-left:15%">
+
+<div class="w3-container w3-teal">
+  <h1>Network settings</h1>
+</div>
+
+<div class="w3-container">
+<p>{status}</p>
+</div>
+
+<div class="w3-container">
+<form class="w3-container w3-card-4" method="GET">
+  <p>
+  <label>IP address</label>
+  <input class="w3-input w3-border" name="ip" type="text" value="{ip}"></p>
+  <p>
+  <button class="w3-btn w3-blue">Update</button></p>
+</form>
+</div>
+
+</div>
+
+</body>
+</html>
