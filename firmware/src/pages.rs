@@ -12,25 +12,32 @@ use loop_anode;
 use loop_cathode;
 use electrometer;
 
-struct OpnFmt(Option<f32>);
+macro_rules! opn_fmt {
+    ($struct_name:ident, $error:expr) => {
+        struct $struct_name(Option<f32>);
 
-impl fmt::Display for OpnFmt {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.0 {
-            None => f.write_str("ERROR"),
-            Some(x) => x.fmt(f)
+        impl fmt::Display for $struct_name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                match self.0 {
+                    None => f.write_str($error),
+                    Some(x) => x.fmt(f)
+                }
+            }
+        }
+
+        impl fmt::LowerExp for $struct_name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                match self.0 {
+                    None => f.write_str($error),
+                    Some(x) => x.fmt(f)
+                }
+            }
         }
     }
 }
 
-impl fmt::LowerExp for OpnFmt {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.0 {
-            None => f.write_str("ERROR"),
-            Some(x) => x.fmt(f)
-        }
-    }
-}
+opn_fmt!(OpnFmt, "ERROR");
+opn_fmt!(OpnFmtJSON, "null");
 
 pub fn serve(output: &mut TcpSocket, request: &http::Request,
              config: &mut config::Config,
@@ -64,6 +71,24 @@ pub fn serve(output: &mut TcpSocket, request: &http::Request,
                 cathode_fbv=OpnFmt(cathode.fbv),
                 ion_current=OpnFmt(electrometer.ic.and_then(|x| Some(x*1.0e9)))).unwrap();
         },
+        b"/measure.json" => {
+            let (cathode, electrometer) = cortex_m::interrupt::free(|cs| {
+                (loop_cathode_m.borrow(cs).borrow().get_status(),
+                 electrometer_m.borrow(cs).borrow().get_status())
+            });
+
+            // TODO: factor this
+            let pressure = electrometer.ic.and_then(|ic| {
+                if ic > 1.0e-12 {
+                    cathode.fbi.and_then(|fbi| Some(ic/fbi/18.75154))
+                } else {
+                    None
+                }
+            });
+            http::write_reply_header(output, 200, "application/json", false).unwrap();
+            write!(output, "{{\"pressure\": {:.1e}, \"current\": {:.3e}}}",
+                   OpnFmtJSON(pressure), OpnFmtJSON(electrometer.ic)).unwrap();
+        }
         b"/network_settings.html" => {
             let mut status = "";
 
