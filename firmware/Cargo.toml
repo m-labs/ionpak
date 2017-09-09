@@ -17,7 +17,7 @@ features = ["rt"]
 
 [dependencies.smoltcp]
 git = "https://github.com/m-labs/smoltcp"
-rev = "962180b"
+rev = "14355e1"
 features = []
 default-features = false
 
