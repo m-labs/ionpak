@@ -52,6 +52,7 @@ It is a good idea to attach the cables to the vacuum system with a strap to avoi
 
 Using the ionpak
 ----------------
+Connect the ionpak to a firewalled Ethernet network *only*, as it does not provide authentication over the network.
 
 The ionpak has a static IP address that defaults to `192.168.69.1`. It has a self-explanatory web interface that you can access by pointing your browser to [http://192.168.69.1](http://192.168.69.1). By default, the controller is disabled and the ionpak will not produce any output voltages; use the web interface to input your gauge settings and enable the controller.
 
