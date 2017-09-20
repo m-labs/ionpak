@@ -20,6 +20,7 @@ Rev 1
 * D504 should follow the schematics in its datasheet
 * R502 should be connected to VCC
 * R502 -> 240 ohm
+* C500 -> 1nF
 * R234 -> 7.5k
 * Q104 -> DMN3404
 * R114 -> 470 ohm
@@ -27,7 +28,7 @@ Rev 1
 * R227 -> 470 ohm
 * R228 -> 4.7k
 * review values of R226 and R113
-* C100 -> 100pF NP0 AVX
+* C100 -> 47pF NP0 AVX, R107 -> 100K, C101 -> 0.1uF
 * use crystal type recommended by the MCU datasheet
 * 22k FBI current resistor -> 10k?
 * add connector for OLED display?
@@ -37,3 +38,4 @@ Rev 1
 * review choice of filament flyback output diode
 * invert LED position so that the Ethernet LED is closest to the connector
 * invert polarity of LEDs (Ethernet LED polarity cannot be programmed)
+* Meanwell DC/DC is coupling noise into pA input
