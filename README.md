@@ -80,9 +80,8 @@ Building and loading the firmware
 
 ```sh
 cd firmware
-openocd -f support/openocd.cfg
 xargo build --release
-arm-none-eabi-gdb -x support/load.gdb target/thumbv7em-none-eabihf/release/ionpak-firmware
+openocd -f openocd.cfg
 ```
 
 License
