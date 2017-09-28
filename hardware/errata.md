@@ -39,3 +39,6 @@ Rev 1
 * invert LED position so that the Ethernet LED is closest to the connector
 * invert polarity of LEDs (Ethernet LED polarity cannot be programmed)
 * Meanwell DC/DC is coupling noise into pA input
+* change D351 model to MBR1645
+* add snubber on D351
+* add heatsink (Seifert-KK633) to D351
