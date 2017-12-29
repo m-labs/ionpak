@@ -30,10 +30,9 @@ Rev 1
 * review values of R226 and R113
 * C100 -> 47pF NP0 AVX, R107 -> 100K, C101 -> 0.1uF
 * use crystal type recommended by the MCU datasheet
-* 22k FBI current resistor -> 10k?
 * add connector for OLED display?
 * enlarge holes to fit M3 screws comfortably
-* add 15M (TBC) resistor between A and FIL-
+* add 15M resistor between A and FIL-
 * power U200 from a small negative voltage instead of GND
 * review choice of filament flyback output diode
 * invert LED position so that the Ethernet LED is closest to the connector
@@ -42,3 +41,6 @@ Rev 1
 * change D351 model to MBR1645
 * add snubber on D351
 * add heatsink (Seifert-KK633) to D351
+* move D351 further away from transformer for heatsink clearance
+* add plated-through holes and pads for mounting rods of BNC connector
+* simplify FBI circuit, 2 ranges only (typ. 8mA and 45mA), remove diodes and neglect MOSFET leakage

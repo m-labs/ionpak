@@ -8,7 +8,7 @@ const FBI_PID_PARAMETERS: pid::Parameters = pid::Parameters {
     ki: 20.0,
     kd: 10.0,
     output_min: 0.5,
-    output_max: 3.1,
+    output_max: 10.0,
     integral_min: -0.1,
     integral_max: 0.1
 };
@@ -98,7 +98,7 @@ impl Controller {
 
         let fv = fv_sample as f32/board::FV_ADC_GAIN;
         let fv_pwm_duty = self.fv_pid.update(fv);
-        board::set_fv_pwm(fv_pwm_duty as u16);
+        board::set_fv_pwm(120);
 
         self.last_fv = Some(fv);
         self.last_fbv = Some(fbv_sample as f32/board::FBV_ADC_GAIN);
