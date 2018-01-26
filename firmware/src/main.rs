@@ -11,9 +11,8 @@ use core::cell::{Cell, RefCell};
 use core::fmt;
 use cortex_m::interrupt::Mutex;
 use smoltcp::wire::EthernetAddress;
-use smoltcp::iface::{ArpCache, SliceArpCache, EthernetInterface};
-use smoltcp::socket::{AsSocket, SocketSet};
-use smoltcp::socket::{TcpSocket, TcpSocketBuffer};
+use smoltcp::iface::{NeighborCache, EthernetInterfaceBuilder};
+use smoltcp::socket::{SocketSet, TcpSocket, TcpSocketBuffer};
 
 #[macro_export]
 macro_rules! print {
@@ -160,15 +159,16 @@ fn main() {
         println!("programmed MAC address is invalid, using default");
         hardware_addr = EthernetAddress([0x10, 0xE2, 0xD5, 0x00, 0x03, 0x00]);
     }
-    let mut protocol_addrs = [config.ip];
-    println!("MAC {} IP {}", hardware_addr, protocol_addrs[0]);
-    let mut arp_cache_entries: [_; 8] = Default::default();
-    let mut arp_cache = SliceArpCache::new(&mut arp_cache_entries[..]);
-    let mut device = ethmac::EthernetDevice::new();
-    device.init(hardware_addr);
-    let mut iface = EthernetInterface::new(
-        &mut device, &mut arp_cache as &mut ArpCache,
-        hardware_addr, &mut protocol_addrs[..]);
+    let mut ip_addrs = [config.ip];
+    println!("MAC {} IP {}", hardware_addr, ip_addrs[0]);
+    let mut neighbor_cache_storage = [None; 8];
+    let neighbor_cache = NeighborCache::new(&mut neighbor_cache_storage[..]);
+    let device = ethmac::Device::new(hardware_addr);
+    let mut iface = EthernetInterfaceBuilder::new(device)
+                .ethernet_addr(hardware_addr)
+                .neighbor_cache(neighbor_cache)
+                .ip_addrs(&mut ip_addrs[..])
+                .finalize();
 
     create_socket_storage!(tcp_rx_storage0, tcp_tx_storage0);
     create_socket_storage!(tcp_rx_storage1, tcp_tx_storage1);
@@ -211,18 +211,14 @@ fn main() {
     loop {
         let time = get_time_ms();
 
-        for &mut(ref mut request, ref tcp_handle) in sessions.iter_mut() {
-            let socket: &mut TcpSocket = sockets.get_mut(*tcp_handle).as_socket();
+        for &mut(ref mut request, tcp_handle) in sessions.iter_mut() {
+            let socket = &mut *sockets.get::<TcpSocket>(tcp_handle);
             if !socket.is_open() {
                 socket.listen(80).unwrap()
             }
 
             if socket.may_recv() {
-                let request_status = {
-                    let data = socket.recv(TCP_RX_BUFFER_SIZE).unwrap();
-                    request.input(data)
-                };
-                match request_status {
+                match socket.recv(|data| (data.len(), request.input(data))).unwrap() {
                     Ok(true) => {
                         if socket.can_send() {
                             pages::serve(socket, &request, &mut config, &LOOP_ANODE, &LOOP_CATHODE, &ELECTROMETER);

@@ -17,8 +17,8 @@ features = ["rt"]
 
 [dependencies.smoltcp]
 git = "https://github.com/m-labs/smoltcp"
-rev = "14355e1"
-features = []
+rev = "cb5be48"
+features = ["proto-ipv4", "socket-tcp"]
 default-features = false
 
 [profile.release]

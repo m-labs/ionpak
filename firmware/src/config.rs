@@ -1,6 +1,6 @@
 use eeprom;
 use crc32;
-use smoltcp::wire::IpAddress;
+use smoltcp::wire::{IpCidr, IpAddress};
 
 const MAGIC: u8 = 0x54;
 
@@ -29,7 +29,7 @@ impl EepromReader {
         }
         true
     }
-    
+
     fn read_payload<'a>(&'a mut self) -> Result<&'a [u8], ()> {
         let mut ok = self.read_payload_block(0);
         if !ok {
@@ -58,32 +58,36 @@ fn write_eeprom_payload(payload: &[u8]) {
 }
 
 pub struct Config {
-    pub ip: IpAddress,
+    pub ip: IpCidr,
 }
 
 impl Config {
     pub fn new() -> Config {
         Config {
-            ip: IpAddress::v4(192, 168, 69, 1)
+            ip: IpCidr::new(IpAddress::v4(192, 168, 69, 1), 24)
         }
     }
-    
+
     pub fn load(&mut self) {
         let mut reader = EepromReader::new();
         let payload = reader.read_payload();
         if payload.is_ok() {
             let payload = payload.unwrap();
-            self.ip = IpAddress::v4(payload[0], payload[1], payload[2], payload[3]);
+            self.ip = IpCidr::new(
+                IpAddress::v4(payload[0], payload[1], payload[2], payload[3]),
+                payload[4])
         }
     }
-    
+
     pub fn save(&self) {
-        let mut payload: [u8; 4] = [0; 4];
-        let ip4 = match self.ip {
-            IpAddress::Ipv4(x) => x.0,
+        match self.ip {
+            IpCidr::Ipv4(ipv4) => {
+                let mut payload: [u8; 5] = [0; 5];
+                payload[0..4].copy_from_slice(&ipv4.address().0);
+                payload[4] = ipv4.prefix_len();
+                write_eeprom_payload(&payload);
+            }
             _ => panic!("unsupported network address")
         };
-        payload[0..4].copy_from_slice(&ip4);
-        write_eeprom_payload(&payload);
     }
 }

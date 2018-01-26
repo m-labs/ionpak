@@ -1,9 +1,10 @@
-use core::slice;
+use core::{slice, cmp};
+use core::cell::RefCell;
 use cortex_m;
 use tm4c129x;
-use smoltcp::Error;
+use smoltcp::Result;
 use smoltcp::wire::EthernetAddress;
-use smoltcp::phy::{DeviceLimits, Device};
+use smoltcp::phy;
 
 use board;
 
@@ -23,16 +24,17 @@ const EMAC_TDES0_OWN: u32 =     0x80000000; // Indicates that the descriptor is 
 const EMAC_TDES0_LS: u32 =      0x20000000; // Last Segment
 const EMAC_TDES0_FS: u32 =      0x10000000; // First Segment
 const EMAC_TDES0_TCH: u32 =     0x00100000; // Second Address Chained
+#[allow(dead_code)]
 const EMAC_TDES1_TBS1: u32 =    0x00001FFF; // Transmit Buffer 1 Size
 
 // Receive DMA descriptor flags
 const EMAC_RDES0_OWN: u32 =     0x80000000; // indicates that the descriptor is owned by the DMA
 const EMAC_RDES0_FL: u32 =      0x3FFF0000; // Frame Length
 const EMAC_RDES0_ES: u32 =      0x00008000; // Error Summary
-const EMAC_RDES1_RCH: u32 =     0x00004000; // Second Address Chained
-const EMAC_RDES1_RBS1: u32 =    0x00001FFF; // Receive Buffer 1 Size
 const EMAC_RDES0_FS: u32 =      0x00000200; // First Descriptor
 const EMAC_RDES0_LS: u32 =      0x00000100; // Last Descriptor
+const EMAC_RDES1_RCH: u32 =     0x00004000; // Second Address Chained
+const EMAC_RDES1_RBS1: u32 =    0x00001FFF; // Receive Buffer 1 Size
 
 const ETH_DESC_U32_SIZE: usize =    8;
 const ETH_TX_BUFFER_COUNT: usize =  2;
@@ -97,7 +99,7 @@ fn phy_write_ext(reg_addr: u8, reg_data: u16) {
     phy_write(EPHY_ADDAR, reg_data);
 }
 
-pub struct EthernetDevice {
+struct DeviceInner {
     tx_desc_buf: [u32; ETH_TX_BUFFER_COUNT * ETH_DESC_U32_SIZE],
     rx_desc_buf: [u32; ETH_RX_BUFFER_COUNT * ETH_DESC_U32_SIZE],
     tx_cur_desc: usize,
@@ -108,9 +110,9 @@ pub struct EthernetDevice {
     rx_pkt_buf: [u8; ETH_RX_BUFFER_COUNT * ETH_RX_BUFFER_SIZE],
 }
 
-impl EthernetDevice {
-    pub fn new() -> EthernetDevice {
-        EthernetDevice {
+impl DeviceInner {
+    fn new() -> DeviceInner {
+        DeviceInner {
             tx_desc_buf: [0; ETH_TX_BUFFER_COUNT * ETH_DESC_U32_SIZE],
             rx_desc_buf: [0; ETH_RX_BUFFER_COUNT * ETH_DESC_U32_SIZE],
             tx_cur_desc: 0,
@@ -122,7 +124,7 @@ impl EthernetDevice {
         }
     }
 
-    pub fn init(&mut self, mac_addr: EthernetAddress) {
+    fn init(&mut self, mac_addr: EthernetAddress) {
         // Initialize TX DMA descriptors
         for x in 0..ETH_TX_BUFFER_COUNT {
             let p = x * ETH_DESC_U32_SIZE;
@@ -278,7 +280,7 @@ impl EthernetDevice {
                 w.re().bit(true) // Receiver Enable
                 .te().bit(true) // Transmiter Enable
             );
-            
+
             // Manage DMA transmission and reception
             emac0.dmaopmode.modify(|_, w|
                 w.sr().bit(true) // Start Receive
@@ -287,105 +289,51 @@ impl EthernetDevice {
         });
     }
 
-    fn release_rx_buf(&mut self) {
+    // RX buffer functions
+
+    fn rx_buf_owned(&self) -> bool {
+        self.rx_desc_buf[self.rx_cur_desc + 0] & EMAC_RDES0_OWN == 0
+    }
+
+    fn rx_buf_valid(&self) -> bool {
+        self.rx_desc_buf[self.rx_cur_desc + 0] &
+            (EMAC_RDES0_FS | EMAC_RDES0_LS | EMAC_RDES0_ES) ==
+            (EMAC_RDES0_FS | EMAC_RDES0_LS)
+    }
+
+    unsafe fn rx_buf_as_slice<'a>(&self) -> &'a [u8] {
+        let len  = (self.rx_desc_buf[self.rx_cur_desc + 0] & EMAC_RDES0_FL) >> 16;
+        let len  = cmp::max(len as usize, ETH_RX_BUFFER_SIZE);
+        let addr = self.rx_desc_buf[self.rx_cur_desc + 2] as *const u8;
+        slice::from_raw_parts(addr, len)
+    }
+
+    fn rx_buf_release(&mut self) {
+        self.rx_desc_buf[self.rx_cur_desc + 0] = EMAC_RDES0_OWN;
+
         self.rx_cur_desc += ETH_DESC_U32_SIZE;
-        if self.rx_cur_desc >= (ETH_RX_BUFFER_COUNT * ETH_DESC_U32_SIZE) {
+        if self.rx_cur_desc == self.rx_desc_buf.len() {
             self.rx_cur_desc = 0;
         }
-        self.rx_desc_buf[self.rx_cur_desc + 0] = EMAC_RDES0_OWN; // release descriptor
-    }
-}
-
-impl Device for EthernetDevice {
-    type RxBuffer = RxBuffer;
-    type TxBuffer = TxBuffer;
-
-    fn limits(&self) -> DeviceLimits {
-        let mut limits = DeviceLimits::default();
-        limits.max_transmission_unit = 1500;
-        limits.max_burst_size = Some(ETH_RX_BUFFER_COUNT);
-        limits
+        self.rx_counter += 1;
     }
 
-    fn receive(&mut self, _timestamp: u64) -> Result<Self::RxBuffer, Error> {
-        if (self.rx_desc_buf[self.rx_cur_desc + 0] & EMAC_RDES0_OWN) == 0 {
-            // check for the whole packet in the buffer and no any error
-            if (EMAC_RDES0_FS | EMAC_RDES0_LS) == self.rx_desc_buf[self.rx_cur_desc + 0] & (EMAC_RDES0_FS | EMAC_RDES0_LS | EMAC_RDES0_ES) {
-                // Retrieve the length of the frame
-                let mut n = (self.rx_desc_buf[self.rx_cur_desc + 0] & EMAC_RDES0_FL) >> 16;
-                // Limit the number of data to read
-                if n > ETH_RX_BUFFER_SIZE as u32 { n = ETH_RX_BUFFER_SIZE as u32; }
-                let sl = unsafe {
-                    slice::from_raw_parts(self.rx_desc_buf[self.rx_cur_desc + 2] as * mut u8,
-                                          n as usize)
-                };
-                Ok(RxBuffer(sl, self))
-            } else {
-                // Ignore invalid frame
-                self.release_rx_buf();
-                Err(Error::Exhausted)
-            }
-        } else {
-            Err(Error::Exhausted) // currently no buffers to process
-        }
+    // TX buffer functions
+
+    fn tx_buf_owned(&self) -> bool {
+        self.tx_desc_buf[self.tx_cur_desc + 0] & EMAC_TDES0_OWN == 0
     }
 
-    fn transmit(&mut self, _timestamp: u64, length: usize) -> Result<Self::TxBuffer, Error> {
-        // Check if the TX DMA buffer released
-        if (self.tx_desc_buf[self.tx_cur_desc + 0] & EMAC_TDES0_OWN) == 0 {
-            // Write the number of bytes to send
-            self.tx_desc_buf[self.tx_cur_desc + 1] = length as u32 & EMAC_TDES1_TBS1;
-
-            let sl = unsafe {
-                slice::from_raw_parts_mut(self.tx_desc_buf[self.tx_cur_desc + 2] as * mut u8,
-                                          length)
-            };
-            Ok(TxBuffer(sl, self))
-        } else {
-            // to do if need: Instruct the DMA to poll the receive descriptor list
-            Err(Error::Exhausted)
-        }
+    unsafe fn tx_buf_as_slice<'a>(&mut self, len: usize) -> &'a mut [u8] {
+        let len = cmp::max(len, ETH_TX_BUFFER_SIZE);
+        self.tx_desc_buf[self.tx_cur_desc + 1] = len as u32;
+        let addr = self.tx_desc_buf[self.tx_cur_desc + 2] as *mut u8;
+        slice::from_raw_parts_mut(addr, len)
     }
-}
 
-pub struct RxBuffer(*const [u8], *mut EthernetDevice);
-
-impl AsRef<[u8]> for RxBuffer {
-    fn as_ref(&self) -> &[u8] {
-        unsafe { &*self.0 }
-    }
-}
-
-impl Drop for RxBuffer {
-    fn drop(&mut self) {
-        let mut device = unsafe { &mut *self.1 };
-        device.release_rx_buf();
-        device.rx_counter += 1;
-    }
-}
-
-pub struct TxBuffer(*mut [u8], *mut EthernetDevice);
-
-impl AsRef<[u8]> for TxBuffer {
-    fn as_ref(&self) -> &[u8] {
-        unsafe { &*self.0 }
-    }
-}
-
-impl AsMut<[u8]> for TxBuffer {
-    fn as_mut(&mut self) -> &mut [u8] {
-        unsafe { &mut *self.0 }
-    }
-}
-
-impl Drop for TxBuffer {
-    fn drop(&mut self) {
-        let mut device = unsafe { &mut *self.1 };
-
-        // Use chain structure rather than ring structure
-        // Set LS and FS flags as the data fits in a single buffer and give the ownership of the descriptor to the DMA
-        device.tx_desc_buf[device.tx_cur_desc + 0] = EMAC_TDES0_LS | EMAC_TDES0_FS | EMAC_TDES0_TCH;
-        device.tx_desc_buf[device.tx_cur_desc + 0] |= EMAC_TDES0_OWN; // Set ownership for DMA here
+    fn tx_buf_release(&mut self) {
+        self.tx_desc_buf[self.tx_cur_desc + 0] =
+            EMAC_TDES0_OWN | EMAC_TDES0_LS | EMAC_TDES0_FS | EMAC_TDES0_TCH;
 
         cortex_m::interrupt::free(|cs| {
             let emac0 = tm4c129x::EMAC0.borrow(cs);
@@ -395,13 +343,85 @@ impl Drop for TxBuffer {
             unsafe { emac0.txpolld.write(|w| w.tpd().bits(0)); }
         });
 
-        // Calculate next DMA descriptor offset
-        let mut tx_next_desc = device.tx_cur_desc + ETH_DESC_U32_SIZE;
-        if tx_next_desc >= (ETH_TX_BUFFER_COUNT * ETH_DESC_U32_SIZE) {
-            tx_next_desc = 0;
+        self.tx_cur_desc += ETH_DESC_U32_SIZE;
+        if self.tx_cur_desc == self.tx_desc_buf.len() {
+            self.tx_cur_desc = 0;
         }
-        device.tx_cur_desc = tx_next_desc;
+        self.tx_counter += 1;
+    }
+}
 
-        device.tx_counter += 1;
+pub struct Device(RefCell<DeviceInner>);
+
+impl Device {
+    pub fn new(mac: EthernetAddress) -> Device {
+        let mut inner = DeviceInner::new();
+        inner.init(mac);
+        Device(RefCell::new(inner))
+    }
+}
+
+impl<'a> phy::Device<'a> for Device {
+    type RxToken = RxToken<'a>;
+    type TxToken = TxToken<'a>;
+
+    fn capabilities(&self) -> phy::DeviceCapabilities {
+        let mut capabilities = phy::DeviceCapabilities::default();
+        capabilities.max_transmission_unit = 1500;
+        capabilities.max_burst_size = Some(ETH_RX_BUFFER_COUNT);
+        capabilities
+    }
+
+    fn receive(&mut self) -> Option<(RxToken, TxToken)> {
+        {
+            let mut device = self.0.borrow_mut();
+
+            // Skip all queued packets with errors.
+            while device.rx_buf_owned() && !device.rx_buf_valid() {
+                device.rx_buf_release()
+            }
+
+            if !(device.rx_buf_owned() && device.tx_buf_owned()) {
+                return None
+            }
+        }
+
+        Some((RxToken(&self.0), TxToken(&self.0)))
+    }
+
+    fn transmit(&mut self) -> Option<TxToken> {
+        {
+            let device = self.0.borrow_mut();
+
+            if !device.tx_buf_owned() {
+                return None
+            }
+        }
+
+        Some(TxToken(&self.0))
+    }
+}
+
+pub struct RxToken<'a>(&'a RefCell<DeviceInner>);
+
+impl<'a> phy::RxToken for RxToken<'a> {
+    fn consume<R, F>(self, _timestamp: u64, f: F) -> Result<R>
+            where F: FnOnce(&[u8]) -> Result<R> {
+        let mut device = self.0.borrow_mut();
+        let result = f(unsafe { device.rx_buf_as_slice() });
+        device.rx_buf_release();
+        result
+    }
+}
+
+pub struct TxToken<'a>(&'a RefCell<DeviceInner>);
+
+impl<'a> phy::TxToken for TxToken<'a> {
+    fn consume<R, F>(self, _timestamp: u64, len: usize, f: F) -> Result<R>
+            where F: FnOnce(&mut [u8]) -> Result<R> {
+        let mut device = self.0.borrow_mut();
+        let result = f(unsafe { device.tx_buf_as_slice(len) });
+        device.tx_buf_release();
+        result
     }
 }
