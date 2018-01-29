@@ -303,7 +303,7 @@ impl DeviceInner {
 
     unsafe fn rx_buf_as_slice<'a>(&self) -> &'a [u8] {
         let len  = (self.rx_desc_buf[self.rx_cur_desc + 0] & EMAC_RDES0_FL) >> 16;
-        let len  = cmp::max(len as usize, ETH_RX_BUFFER_SIZE);
+        let len  = cmp::min(len as usize, ETH_RX_BUFFER_SIZE);
         let addr = self.rx_desc_buf[self.rx_cur_desc + 2] as *const u8;
         slice::from_raw_parts(addr, len)
     }
@@ -325,7 +325,7 @@ impl DeviceInner {
     }
 
     unsafe fn tx_buf_as_slice<'a>(&mut self, len: usize) -> &'a mut [u8] {
-        let len = cmp::max(len, ETH_TX_BUFFER_SIZE);
+        let len = cmp::min(len, ETH_TX_BUFFER_SIZE);
         self.tx_desc_buf[self.tx_cur_desc + 1] = len as u32;
         let addr = self.tx_desc_buf[self.tx_cur_desc + 2] as *mut u8;
         slice::from_raw_parts_mut(addr, len)
