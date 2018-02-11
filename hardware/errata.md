@@ -37,10 +37,10 @@ Rev 1
 * review choice of filament flyback output diode
 * invert LED position so that the Ethernet LED is closest to the connector
 * invert polarity of LEDs (Ethernet LED polarity cannot be programmed)
-* Meanwell DC/DC is coupling noise into pA input
 * change D351 model to MBR1645
 * add snubber on D351
 * add heatsink (Seifert-KK633) to D351
 * move D351 further away from transformer for heatsink clearance
 * add plated-through holes and pads for mounting rods of BNC connector
 * simplify FBI circuit, 2 ranges only (typ. 8mA and 45mA), remove diodes and neglect MOSFET leakage
+* to support different case designs, replace the holes on the connectors side with slots. One of the case designs requires holes whose center is at 11.5mm from the board edge.
