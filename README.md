@@ -3,7 +3,7 @@ ionpak
 
 A modern, low-cost universal controller for hot-cathode ionization vacuum gauges.
 
-![Test setup](https://raw.githubusercontent.com/m-labs/ionpak/master/pictures/setup1_resized.jpg)
+![Test setup](https://raw.githubusercontent.com/m-labs/ionpak/master/pictures/full_ionpak_front_resized.jpg)
 
 Why?
 ----
