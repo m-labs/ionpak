@@ -44,3 +44,5 @@ Rev 1
 * add plated-through holes and pads for mounting rods of BNC connector
 * simplify FBI circuit, 2 ranges only (typ. 8mA and 45mA), remove diodes and neglect MOSFET leakage
 * to support different case designs, replace the holes on the connectors side with slots. One of the case designs requires holes whose center is at 11.5mm from the board edge.
+* review choice of external LED connector type and clearance
+* if using a non-polarized connector, change pinout so that connecting the LEDs the wrong way cannot cause damage
