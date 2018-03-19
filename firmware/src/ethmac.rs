@@ -309,13 +309,13 @@ impl DeviceInner {
     }
 
     fn rx_buf_release(&mut self) {
+        self.rx_desc_buf[self.rx_cur_desc + 0] = EMAC_RDES0_OWN;
+
         self.rx_cur_desc += ETH_DESC_U32_SIZE;
         if self.rx_cur_desc == self.rx_desc_buf.len() {
             self.rx_cur_desc = 0;
         }
         self.rx_counter += 1;
-
-        self.rx_desc_buf[self.rx_cur_desc + 0] = EMAC_RDES0_OWN;
     }
 
     // TX buffer functions
