@@ -355,14 +355,17 @@ impl DeviceInner {
 pub struct Device(RefCell<DeviceInner>);
 
 impl Device {
-    pub fn new(mac: EthernetAddress) -> Device {
-        let mut inner = DeviceInner::new();
-        inner.init(mac);
-        Device(RefCell::new(inner))
+    pub fn new() -> Device {
+        Device(RefCell::new(DeviceInner::new()))
+    }
+
+    // After `init` is called, `Device` shall not be moved.
+    pub unsafe fn init(&mut self, mac: EthernetAddress) {
+        self.0.borrow_mut().init(mac);
     }
 }
 
-impl<'a> phy::Device<'a> for Device {
+impl<'a, 'b> phy::Device<'a> for &'b mut Device {
     type RxToken = RxToken<'a>;
     type TxToken = TxToken<'a>;
 

@@ -164,8 +164,9 @@ fn main() {
     println!("MAC {} IP {}", hardware_addr, ip_addrs[0]);
     let mut neighbor_cache_storage = [None; 8];
     let neighbor_cache = NeighborCache::new(&mut neighbor_cache_storage[..]);
-    let device = ethmac::Device::new(hardware_addr);
-    let mut iface = EthernetInterfaceBuilder::new(device)
+    let mut device = ethmac::Device::new();
+    unsafe { device.init(hardware_addr) };
+    let mut iface = EthernetInterfaceBuilder::new(&mut device)
                 .ethernet_addr(hardware_addr)
                 .neighbor_cache(neighbor_cache)
                 .ip_addrs(&mut ip_addrs[..])
