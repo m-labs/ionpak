@@ -10,6 +10,7 @@ extern crate smoltcp;
 use core::cell::{Cell, RefCell};
 use core::fmt;
 use cortex_m::interrupt::Mutex;
+use smoltcp::time::Instant;
 use smoltcp::wire::EthernetAddress;
 use smoltcp::iface::{NeighborCache, EthernetInterfaceBuilder};
 use smoltcp::socket::{SocketSet, TcpSocket, TcpSocketBuffer};
@@ -238,7 +239,7 @@ fn main() {
                 socket.close();
             }
         }
-        match iface.poll(&mut sockets, time) {
+        match iface.poll(&mut sockets, Instant::from_millis(time as i64)) {
             Ok(_) => (),
             Err(e) => println!("poll error: {}", e)
         }

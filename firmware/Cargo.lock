@@ -9,6 +9,11 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "bitflags"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "byteorder"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -49,7 +54,7 @@ version = "1.0.0"
 dependencies = [
  "cortex-m 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cortex-m-rt 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "smoltcp 0.4.0 (git+https://github.com/m-labs/smoltcp?rev=cb5be48)",
+ "smoltcp 0.4.0 (git+https://github.com/m-labs/smoltcp?rev=cd893e6)",
  "tm4c129x 0.5.0 (git+https://github.com/m-labs/dslite2svd?rev=d527f3f)",
  "walkdir 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -148,8 +153,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "smoltcp"
 version = "0.4.0"
-source = "git+https://github.com/m-labs/smoltcp?rev=cb5be48#cb5be4886864ca4c89952945b08b66db90e61d49"
+source = "git+https://github.com/m-labs/smoltcp?rev=cd893e6#cd893e6ab60f094d684b37be7bc013bf79f0459d"
 dependencies = [
+ "bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "managed 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -230,6 +236,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [metadata]
 "checksum aligned 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d1a92995cea48691c7c93e12597cca4d692bb3130d0a291c7141b9793c7829e7"
 "checksum bare-metal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "aacbba24771a81cfe18f5aedd5bf3208ca8324ecdd9344ddb61f8d2a051a4574"
+"checksum bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b3c30d3802dfb7281680d6285f2ccdaa8c2d8fee41f93805dba5c4cf50dc23cf"
 "checksum byteorder 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "652805b7e73fada9d85e9a6682a4abd490cb52d96aeecc12e33a0de34dfd0d23"
 "checksum chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7c20ebe0b2b08b0aeddba49c609fe7957ba2e33449882cb186a180bc60682fa9"
 "checksum cortex-m 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4d553ca1f23403c81e6d3d28a64ef6e8eadd7f395195aacda65cbc0dc987738e"
@@ -247,7 +254,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum same-file 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d931a44fdaa43b8637009e7632a02adc4f2b2e0733c08caa4cf00e8da4a117a7"
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
-"checksum smoltcp 0.4.0 (git+https://github.com/m-labs/smoltcp?rev=cb5be48)" = "<none>"
+"checksum smoltcp 0.4.0 (git+https://github.com/m-labs/smoltcp?rev=cd893e6)" = "<none>"
 "checksum time 0.1.39 (registry+https://github.com/rust-lang/crates.io-index)" = "a15375f1df02096fb3317256ce2cee6a1f42fc84ea5ad5fc8c421cfe40c73098"
 "checksum tm4c129x 0.5.0 (git+https://github.com/m-labs/dslite2svd?rev=d527f3f)" = "<none>"
 "checksum vcell 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "45c297f0afb6928cd08ab1ff9d95e99392595ea25ae1b5ecf822ff8764e57a0d"

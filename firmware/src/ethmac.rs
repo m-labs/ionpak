@@ -3,6 +3,7 @@ use core::cell::RefCell;
 use cortex_m;
 use tm4c129x;
 use smoltcp::Result;
+use smoltcp::time::Instant;
 use smoltcp::wire::EthernetAddress;
 use smoltcp::phy;
 
@@ -405,7 +406,7 @@ impl<'a> phy::Device<'a> for Device {
 pub struct RxToken<'a>(&'a RefCell<DeviceInner>);
 
 impl<'a> phy::RxToken for RxToken<'a> {
-    fn consume<R, F>(self, _timestamp: u64, f: F) -> Result<R>
+    fn consume<R, F>(self, _timestamp: Instant, f: F) -> Result<R>
             where F: FnOnce(&[u8]) -> Result<R> {
         let mut device = self.0.borrow_mut();
         let result = f(unsafe { device.rx_buf_as_slice() });
@@ -417,7 +418,7 @@ impl<'a> phy::RxToken for RxToken<'a> {
 pub struct TxToken<'a>(&'a RefCell<DeviceInner>);
 
 impl<'a> phy::TxToken for TxToken<'a> {
-    fn consume<R, F>(self, _timestamp: u64, len: usize, f: F) -> Result<R>
+    fn consume<R, F>(self, _timestamp: Instant, len: usize, f: F) -> Result<R>
             where F: FnOnce(&mut [u8]) -> Result<R> {
         let mut device = self.0.borrow_mut();
         let result = f(unsafe { device.tx_buf_as_slice(len) });
