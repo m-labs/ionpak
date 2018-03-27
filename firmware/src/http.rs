@@ -35,7 +35,7 @@ impl Request {
         self.state = State::WaitG;
         self.query_idx = 0;
     }
-    
+
     pub fn input_char(&mut self, c: u8) -> Result<bool, &'static str> {
         match self.state {
             State::WaitG => {
@@ -115,7 +115,7 @@ impl Request {
         }
         Ok(false)
     }
-    
+
     pub fn input(&mut self, buf: &[u8]) -> Result<bool, &'static str> {
         let mut result = Ok(false);
         for c in buf.iter() {
@@ -126,7 +126,7 @@ impl Request {
         }
         result
     }
-    
+
     pub fn get_query<'a>(&'a self) -> Result<&'a [u8], &'static str> {
         if self.state != State::Finished {
             return Err("request is not finished")
@@ -174,6 +174,7 @@ pub fn write_reply_header(output: &mut fmt::Write, status: u16, content_type: &s
            status, status_text, content_type)?;
     if gzip {
         write!(output, "Content-Encoding: gzip\r\n")?;
+        write!(output, "Cache-Control: public, max-age=600\r\n")?;
     }
     write!(output, "\r\n")
 }
