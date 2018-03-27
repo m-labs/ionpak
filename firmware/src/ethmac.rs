@@ -166,13 +166,13 @@ impl RxRing {
     }
 
     fn buf_release(&mut self) {
-        self.desc_buf[self.cur_desc + 0] = EMAC_RDES0_OWN;
-
         self.cur_desc += ETH_DESC_U32_SIZE;
         if self.cur_desc == self.desc_buf.len() {
             self.cur_desc = 0;
         }
         self.counter += 1;
+
+        self.desc_buf[self.cur_desc + 0] = EMAC_RDES0_OWN;
     }
 }
 
