@@ -31,8 +31,8 @@ macro_rules! println {
 
 #[no_mangle]
 #[lang = "panic_fmt"]
-pub fn panic_fmt(args: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
-    println!("panic at {}:{}: {}", file, line, args);
+pub fn panic_fmt(msg: fmt::Arguments, file: &'static str, line: u32, col: u32) -> ! {
+    println!("panic at {}:{}:{}: {}", file, line, col, msg);
     loop {}
 }
 
