@@ -313,51 +313,51 @@ impl Device {
             // Set the DMA operation mode
             emac0.dmaopmode.write(|w|
                 w.rsf().bit(true) // Receive Store and Forward
-                .tsf().bit(true) // Transmit Store and Forward
-                .ttc()._64() // Transmit Threshold Control
-                .rtc()._64() // Receive Threshold Control
+                 .tsf().bit(true) // Transmit Store and Forward
+                 .ttc()._64() // Transmit Threshold Control
+                 .rtc()._64() // Receive Threshold Control
             );
 
             // Set the bus mode register.
-            emac0.dmabusmod.write(|w| unsafe {
+            emac0.dmabusmod.write(|w|
                 w.atds().bit(true)
-                .aal().bit(true) // Address Aligned Beats
-                .usp().bit(true) // Use Separate Programmable Burst Length ???
-                .rpbl().bits(1) // RX DMA Programmable Burst Length
-                .pbl().bits(1) // Programmable Burst Length
-                .pr().bits(0) // Priority Ratio 1:1
-            });
+                 .aal().bit(true) // Address Aligned Beats
+                 .usp().bit(true) // Use Separate Programmable Burst Length ???
+                 .rpbl().bits(1) // RX DMA Programmable Burst Length
+                 .pbl().bits(1) // Programmable Burst Length
+                 .pr().bits(0) // Priority Ratio 1:1
+            );
 
             // Disable all the MMC interrupts as these are enabled by default at reset.
-            emac0.mmcrxim.write(|w| unsafe { w.bits(0xFFFFFFFF)});
-            emac0.mmctxim.write(|w| unsafe { w.bits(0xFFFFFFFF)});
+            emac0.mmcrxim.write(|w| w.bits(0xFFFFFFFF));
+            emac0.mmctxim.write(|w| w.bits(0xFFFFFFFF));
 
             // Set MAC configuration options
             emac0.cfg.write(|w|
                 w.dupm().bit(true) // MAC operates in full-duplex mode
-                .ipc().bit(true) // Checksum Offload Enable
-                .prelen()._7() // 7 bytes of preamble
-                .ifg()._96() // 96 bit times
-                .bl()._1024() // Back-Off Limit 1024
-                .ps().bit(true) // ?
+                 .ipc().bit(true) // Checksum Offload Enable
+                 .prelen()._7() // 7 bytes of preamble
+                 .ifg()._96() // 96 bit times
+                 .bl()._1024() // Back-Off Limit 1024
+                 .ps().bit(true) // ?
             );
 
             // Set the maximum receive frame size
-            emac0.wdogto.write(|w| unsafe {
+            emac0.wdogto.write(|w|
                 w.bits(0) // ??? no use watchdog
-            });
+            );
 
             // Set the MAC address
-            emac0.addr0l.write(|w| unsafe {
+            emac0.addr0l.write(|w|
                 w.addrlo().bits(  mac.0[0] as u32 |
                                 ((mac.0[1] as u32) <<  8) |
                                 ((mac.0[2] as u32) << 16) |
                                 ((mac.0[3] as u32) << 24))
-            });
-            emac0.addr0h.write(|w| unsafe {
+            );
+            emac0.addr0h.write(|w|
                 w.addrhi().bits(  mac.0[4] as u16 |
                                 ((mac.0[5] as u16) << 8))
-            });
+            );
 
             // Set MAC filtering options (?)
             emac0.framefltr.write(|w|
@@ -367,10 +367,10 @@ impl Device {
             );
 
             // Initialize hash table
-            emac0.hashtbll.write(|w| unsafe { w.htl().bits(0)});
-            emac0.hashtblh.write(|w| unsafe { w.hth().bits(0)});
+            emac0.hashtbll.write(|w| w.htl().bits(0));
+            emac0.hashtblh.write(|w| w.hth().bits(0));
 
-            emac0.flowctl.write(|w| unsafe { w.bits(0)}); // Disable flow control ???
+            emac0.flowctl.write(|w| w.bits(0)); // Disable flow control ???
 
             emac0.txdladdr.write(|w| unsafe {
                 w.bits((&mut self.tx.desc_buf[0] as *mut u32) as u32)
