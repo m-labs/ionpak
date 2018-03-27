@@ -6,6 +6,7 @@ extern crate cortex_m_rt;
 #[macro_use(interrupt)]
 extern crate tm4c129x;
 extern crate smoltcp;
+extern crate crc;
 
 use core::cell::{Cell, RefCell};
 use core::fmt;
@@ -39,7 +40,6 @@ pub extern fn rust_begin_panic(msg: fmt::Arguments, file: &'static str, line: u3
 #[macro_use]
 mod board;
 mod eeprom;
-mod crc32;
 mod config;
 mod ethmac;
 mod pid;

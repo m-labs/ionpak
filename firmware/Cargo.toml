@@ -9,6 +9,7 @@ walkdir = "1.0"
 [dependencies]
 cortex-m = "0.3"
 cortex-m-rt = "0.3"
+crc = { version = "1.7", default-features = false }
 
 [dependencies.tm4c129x]
 git = "https://github.com/m-labs/dslite2svd"

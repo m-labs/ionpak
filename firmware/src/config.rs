@@ -1,5 +1,5 @@
 use eeprom;
-use crc32;
+use crc::crc32;
 use smoltcp::wire::{IpCidr, IpAddress};
 
 const MAGIC: u8 = 0x54;
