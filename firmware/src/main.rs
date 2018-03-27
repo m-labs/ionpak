@@ -29,9 +29,9 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 
-#[no_mangle]
 #[lang = "panic_fmt"]
-pub fn panic_fmt(msg: fmt::Arguments, file: &'static str, line: u32, col: u32) -> ! {
+#[no_mangle]
+pub extern fn rust_begin_panic(msg: fmt::Arguments, file: &'static str, line: u32, col: u32) -> ! {
     println!("panic at {}:{}:{}: {}", file, line, col, msg);
     loop {}
 }
