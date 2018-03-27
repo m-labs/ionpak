@@ -1,5 +1,4 @@
 use core::{slice, cmp};
-use core::cell::RefCell;
 use cortex_m;
 use tm4c129x;
 use smoltcp::Result;
