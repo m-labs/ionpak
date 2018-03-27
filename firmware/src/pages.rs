@@ -4,6 +4,7 @@ use core::cell::RefCell;
 use core::str;
 use cortex_m;
 use cortex_m::interrupt::Mutex;
+use smoltcp::wire::IpCidr;
 use smoltcp::socket::TcpSocket;
 
 use http;
@@ -96,14 +97,17 @@ pub fn serve(output: &mut TcpSocket, request: &http::Request,
             if ip_arg.is_ok() {
                 let ip_arg = str::from_utf8(ip_arg.unwrap());
                 if ip_arg.is_ok() {
-                    let ip = ip_arg.unwrap().parse();
-                    if ip.is_ok() {
-                        let ip = ip.unwrap();
-                        status = "IP address has been updated and will be active after a reboot.";
-                        config.ip = ip;
-                        config.save();
-                    } else {
-                        status = "failed to parse IP address";
+                    let mut ip_arg = ip_arg.unwrap().split("%2F");
+                    let ip = ip_arg.next().map(|x| x.parse());
+                    let cidr = ip_arg.next().map(|x| x.parse());
+                    match (ip, cidr) {
+                        (Some(Ok(ip)), Some(Ok(cidr))) => {
+                            status = "IP address has been updated and will be active after a reboot.";
+                            config.ip = IpCidr::new(ip, cidr);
+                            config.save();
+                        }
+                        _ =>
+                            status = "failed to parse IP address"
                     }
                 } else {
                     status = "IP address contains an invalid UTF-8 character";
