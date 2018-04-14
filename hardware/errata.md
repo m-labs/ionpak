@@ -47,4 +47,4 @@ Rev 1
 * review choice of external LED connector type and clearance
 * if using a non-polarized connector, change pinout so that connecting the LEDs the wrong way cannot cause damage
 * add 12V fan connector and on/off circuit (with optocoupler)
-* increase sencitivity to ~20fA / LSB
+* increase sensitivity to ~20fA / LSB
