@@ -46,3 +46,5 @@ Rev 1
 * to support different case designs, replace the holes on the connectors side with slots. One of the case designs requires holes whose center is at 11.5mm from the board edge.
 * review choice of external LED connector type and clearance
 * if using a non-polarized connector, change pinout so that connecting the LEDs the wrong way cannot cause damage
+* add 12V fan connector and on/off circuit (with optocoupler)
+* increase sencitivity to ~20fA / LSB
