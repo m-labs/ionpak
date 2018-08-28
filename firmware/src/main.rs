@@ -1,7 +1,10 @@
-#![feature(used, const_fn, core_float, asm, lang_items, conservative_impl_trait)]
+#![feature(const_fn, panic_handler)]
 #![no_std]
+#![no_main]
 
+extern crate libm;
 extern crate cortex_m;
+#[macro_use]
 extern crate cortex_m_rt;
 #[macro_use(interrupt)]
 extern crate tm4c129x;
@@ -30,10 +33,10 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 
-#[lang = "panic_fmt"]
-#[no_mangle]
-pub extern fn rust_begin_panic(msg: fmt::Arguments, file: &'static str, line: u32, col: u32) -> ! {
-    println!("panic at {}:{}:{}: {}", file, line, col, msg);
+#[no_mangle] // https://github.com/rust-lang/rust/issues/{38281,51647}
+#[panic_handler]
+pub fn panic_fmt(info: &core::panic::PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
 
@@ -72,12 +75,10 @@ pub struct UART0;
 
 impl fmt::Write for UART0 {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        let uart_0 = unsafe { &*tm4c129x::UART0::ptr() };
         for c in s.bytes() {
-            unsafe {
-                let uart_0 = tm4c129x::UART0.get();
-                while (*uart_0).fr.read().txff().bit() {}
-                (*uart_0).dr.write(|w| w.data().bits(c))
-            }
+            while uart_0.fr.read().txff().bit() {}
+            uart_0.dr.write(|w| w.data().bits(c))
         }
         Ok(())
     }
@@ -103,7 +104,9 @@ macro_rules! create_socket {
     )
 }
 
-fn main() {
+entry!(main);
+
+fn main() -> ! {
     board::init();
     let button_pressed = board::get_button();
 
@@ -283,7 +286,7 @@ fn main() {
 interrupt!(ADC0SS0, adc0_ss0);
 fn adc0_ss0() {
     cortex_m::interrupt::free(|cs| {
-        let adc0 = tm4c129x::ADC0.borrow(cs);
+        let adc0 = unsafe { &*tm4c129x::ADC0::ptr() };
         if adc0.ostat.read().ov0().bit() {
             panic!("ADC FIFO overflowed")
         }

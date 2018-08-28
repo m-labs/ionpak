@@ -7,14 +7,11 @@ authors = ["whitequark <whitequark@whitequark.org>"]
 walkdir = "1.0"
 
 [dependencies]
-cortex-m = "0.3"
-cortex-m-rt = "0.3"
+libm = "0.1.2"
+cortex-m = { version = "0.5", features = ["const-fn"] }
+cortex-m-rt = "0.5"
 crc = { version = "1.7", default-features = false }
-
-[dependencies.tm4c129x]
-git = "https://github.com/m-labs/dslite2svd"
-rev = "d527f3f"
-features = ["rt"]
+tm4c129x = { version = "0.7", features = ["rt"] }
 
 [dependencies.smoltcp]
 git = "https://github.com/m-labs/smoltcp"

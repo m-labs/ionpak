@@ -48,8 +48,8 @@ pub const FBI_R225: f32 = 22000.0;
 
 
 pub fn set_led(state: bool) {
-    cortex_m::interrupt::free(|cs| {
-        let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let gpio_k = unsafe { &*tm4c129x::GPIO_PORTK::ptr() };
         if state {
             gpio_k.data.modify(|r, w| w.data().bits(r.data().bits() | LED2))
         } else {
@@ -59,30 +59,30 @@ pub fn set_led(state: bool) {
 }
 
 pub fn get_button() -> bool {
-    let gpio_dat = cortex_m::interrupt::free(|cs| {
-        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+    let gpio_dat = cortex_m::interrupt::free(|_cs| {
+        let gpio_l = unsafe { &*tm4c129x::GPIO_PORTL::ptr() };
         gpio_l.data.read().bits() as u8
     });
     gpio_dat & BTNN == 0
 }
 
 pub fn set_hv_pwm(duty: u16) {
-    cortex_m::interrupt::free(|cs| {
-        let pwm0 = tm4c129x::PWM0.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let pwm0 = unsafe { &*tm4c129x::PWM0::ptr() };
         pwm0._0_cmpa.write(|w| w.compa().bits(duty));
     });
 }
 
 pub fn set_fv_pwm(duty: u16) {
-    cortex_m::interrupt::free(|cs| {
-        let pwm0 = tm4c129x::PWM0.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let pwm0 = unsafe { &*tm4c129x::PWM0::ptr() };
         pwm0._1_cmpa.write(|w| w.compa().bits(duty));
     });
 }
 
 pub fn set_fbv_pwm(duty: u16) {
-    cortex_m::interrupt::free(|cs| {
-        let pwm0 = tm4c129x::PWM0.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let pwm0 = unsafe { &*tm4c129x::PWM0::ptr() };
         pwm0._2_cmpa.write(|w| w.compa().bits(duty));
     });
 }
@@ -95,8 +95,8 @@ pub enum EmissionRange {
 }
 
 pub fn set_emission_range(range: EmissionRange) {
-    cortex_m::interrupt::free(|cs| {
-        let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let gpio_p = unsafe { &*tm4c129x::GPIO_PORTP::ptr() };
         gpio_p.data.modify(|r, w| {
             let value = r.data().bits() & 0b100111;
             match range {
@@ -116,8 +116,8 @@ pub enum ElectrometerRange {
 }
 
 pub fn set_electrometer_range(range: ElectrometerRange) {
-    cortex_m::interrupt::free(|cs| {
-        let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let gpio_p = unsafe { &*tm4c129x::GPIO_PORTP::ptr() };
         gpio_p.data.modify(|r, w| {
             let value = r.data().bits() & 0b111100;
             match range {
@@ -130,23 +130,23 @@ pub fn set_electrometer_range(range: ElectrometerRange) {
 }
 
 pub fn reset_error() {
-    cortex_m::interrupt::free(|cs| {
-        let gpio_q = tm4c129x::GPIO_PORTQ.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let gpio_q = unsafe { &*tm4c129x::GPIO_PORTQ::ptr() };
         gpio_q.data.modify(|r, w| w.data().bits(r.data().bits() & !ERR_RESN));
         gpio_q.data.modify(|r, w| w.data().bits(r.data().bits() | ERR_RESN));
     });
 }
 
 pub fn error_latched() -> bool {
-    cortex_m::interrupt::free(|cs| {
-        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let gpio_l = unsafe { &*tm4c129x::GPIO_PORTL::ptr() };
         gpio_l.data.read().bits() as u8 & ERR_LATCHN == 0
     })
 }
 
 pub fn process_errors() {
-    let gpio_dat = cortex_m::interrupt::free(|cs| {
-        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
+    let gpio_dat = cortex_m::interrupt::free(|_cs| {
+        let gpio_l = unsafe { &*tm4c129x::GPIO_PORTL::ptr() };
         gpio_l.data.read().bits() as u8
     });
     if gpio_dat & FV_ERRN == 0 {
@@ -167,8 +167,8 @@ pub fn process_errors() {
 }
 
 pub fn init() {
-    cortex_m::interrupt::free(|cs| {
-        let sysctl = tm4c129x::SYSCTL.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let sysctl = unsafe { &*tm4c129x::SYSCTL::ptr() };
 
         // Set up main oscillator
         sysctl.moscctl.write(|w| w.noxtal().bit(false));
@@ -210,7 +210,7 @@ pub fn init() {
         while !sysctl.prgpio.read().r14().bit() {}
 
         // Set up UART0
-        let gpio_a = tm4c129x::GPIO_PORTA_AHB.borrow(cs);
+        let gpio_a = unsafe { &*tm4c129x::GPIO_PORTA_AHB::ptr() };
         gpio_a.dir.write(|w| w.dir().bits(0b11));
         gpio_a.den.write(|w| w.den().bits(0b11));
         gpio_a.afsel.write(|w| w.afsel().bits(0b11));
@@ -219,7 +219,7 @@ pub fn init() {
         sysctl.rcgcuart.modify(|_, w| w.r0().bit(true));
         while !sysctl.pruart.read().r0().bit() {}
 
-        let uart_0 = tm4c129x::UART0.borrow(cs);
+        let uart_0 = unsafe { &*tm4c129x::UART0::ptr() };
         uart_0.cc.write(|w| w.cs().sysclk());
         uart_0.ibrd.write(|w| w.divint().bits((UART_DIV / 64) as u16));
         uart_0.fbrd.write(|w| w.divfrac().bits((UART_DIV % 64) as u8));
@@ -227,7 +227,7 @@ pub fn init() {
         uart_0.ctl.write(|w| w.rxe().bit(true).txe().bit(true).uarten().bit(true));
 
         // Set up LEDs
-        let gpio_k = tm4c129x::GPIO_PORTK.borrow(cs);
+        let gpio_k = unsafe { &*tm4c129x::GPIO_PORTK::ptr() };
         gpio_k.dir.write(|w| w.dir().bits(LED1|LED2));
         gpio_k.den.write(|w| w.den().bits(LED1|LED2));
         // Switch LED1 to LAN mode
@@ -235,15 +235,15 @@ pub fn init() {
         gpio_k.pctl.modify(|_, w| unsafe { w.pmc4().bits(5) }); // EN0LED0
 
         // Set up gain and emission range control pins
-        let gpio_p = tm4c129x::GPIO_PORTP.borrow(cs);
+        let gpio_p = unsafe { &*tm4c129x::GPIO_PORTP::ptr() };
         gpio_p.dir.write(|w| w.dir().bits(0b111111));
         gpio_p.den.write(|w| w.den().bits(0b111111));
         set_emission_range(EmissionRange::Med);
         set_electrometer_range(ElectrometerRange::Med);
 
         // Set up error and pushbutton pins
-        let gpio_l = tm4c129x::GPIO_PORTL.borrow(cs);
-        let gpio_q = tm4c129x::GPIO_PORTQ.borrow(cs);
+        let gpio_l = unsafe { &*tm4c129x::GPIO_PORTL::ptr() };
+        let gpio_q = unsafe { &*tm4c129x::GPIO_PORTQ::ptr() };
         gpio_l.pur.write(|w| w.pue().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN|BTNN));
         gpio_l.den.write(|w| w.den().bits(FV_ERRN|FBV_ERRN|FBI_ERRN|AV_ERRN|AI_ERRN|ERR_LATCHN|BTNN));
         gpio_q.dir.write(|w| w.dir().bits(ERR_RESN));
@@ -251,13 +251,13 @@ pub fn init() {
         reset_error(); // error latch is an undefined state upon power-up; reset it
 
         // Set up PWMs
-        let gpio_f = tm4c129x::GPIO_PORTF_AHB.borrow(cs);
+        let gpio_f = unsafe { &*tm4c129x::GPIO_PORTF_AHB::ptr() };
         gpio_f.dir.write(|w| w.dir().bits(HV_PWM|FV_PWM));
         gpio_f.den.write(|w| w.den().bits(HV_PWM|FV_PWM));
         gpio_f.afsel.write(|w| w.afsel().bits(HV_PWM|FV_PWM));
         gpio_f.pctl.write(|w| unsafe { w.pmc0().bits(6).pmc2().bits(6) });
 
-        let gpio_g = tm4c129x::GPIO_PORTG_AHB.borrow(cs);
+        let gpio_g = unsafe { &*tm4c129x::GPIO_PORTG_AHB::ptr() };
         gpio_g.dir.write(|w| w.dir().bits(FBV_PWM));
         gpio_g.den.write(|w| w.den().bits(FBV_PWM));
         gpio_g.afsel.write(|w| w.afsel().bits(FBV_PWM));
@@ -266,7 +266,7 @@ pub fn init() {
         sysctl.rcgcpwm.modify(|_, w| w.r0().bit(true));
         while !sysctl.prpwm.read().r0().bit() {}
 
-        let pwm0 = tm4c129x::PWM0.borrow(cs);
+        let pwm0 = unsafe { &*tm4c129x::PWM0::ptr() };
         // HV_PWM
         pwm0._0_gena.write(|w| w.actload().zero().actcmpad().one());
         pwm0._0_load.write(|w| w.load().bits(PWM_LOAD));
@@ -292,11 +292,11 @@ pub fn init() {
 }
 
 pub fn start_adc() {
-    cortex_m::interrupt::free(|cs| {
-        let sysctl = tm4c129x::SYSCTL.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let sysctl = unsafe { &*tm4c129x::SYSCTL::ptr() };
 
-        let gpio_d = tm4c129x::GPIO_PORTD_AHB.borrow(cs);
-        let gpio_e = tm4c129x::GPIO_PORTE_AHB.borrow(cs);
+        let gpio_d = unsafe { &*tm4c129x::GPIO_PORTD_AHB::ptr() };
+        let gpio_e = unsafe { &*tm4c129x::GPIO_PORTE_AHB::ptr() };
         gpio_d.afsel.write(|w| w.afsel().bits(FBV_ADC|AV_ADC));
         gpio_d.amsel.write(|w| w.amsel().bits(FBV_ADC|AV_ADC));
         gpio_e.afsel.write(|w| w.afsel().bits(FD_ADC|FV_ADC|FBI_ADC|IC_ADC));
@@ -305,7 +305,7 @@ pub fn start_adc() {
         sysctl.rcgcadc.modify(|_, w| w.r0().bit(true));
         while !sysctl.pradc.read().r0().bit() {}
 
-        let adc0 = tm4c129x::ADC0.borrow(cs);
+        let adc0 = unsafe { &*tm4c129x::ADC0::ptr() };
         // VCO 480 / 15 = 32MHz ADC clock
         adc0.cc.write(|w| w.cs().syspll().clkdiv().bits(15-1));
         adc0.im.write(|w| w.mask0().bit(true));
@@ -331,27 +331,17 @@ pub fn start_adc() {
         adc0.ctl.write(|w| w.vref().bit(true));
         adc0.actss.write(|w| w.asen0().bit(true));
 
-        let nvic = tm4c129x::NVIC.borrow(cs);
-        nvic.enable(tm4c129x::Interrupt::ADC0SS0);
+        let mut cp = unsafe { tm4c129x::CorePeripherals::steal() };
+        cp.NVIC.enable(tm4c129x::Interrupt::ADC0SS0);
     });
 }
 
 pub fn get_mac_address() -> [u8; 6] {
-    let (userreg0, userreg1) = cortex_m::interrupt::free(|cs| {
-        let flashctl = tm4c129x::FLASH_CTRL.borrow(cs);
+    let (userreg0, userreg1) = cortex_m::interrupt::free(|_cs| {
+        let flashctl = unsafe { &*tm4c129x::FLASH_CTRL::ptr() };
         (flashctl.userreg0.read().bits(),
          flashctl.userreg1.read().bits())
     });
     [userreg0 as u8, (userreg0 >> 8) as u8, (userreg0 >> 16) as u8,
      userreg1 as u8, (userreg1 >> 8) as u8, (userreg1 >> 16) as u8]
-}
-
-pub fn delay(d: u32) {
-    for _ in 0..d {
-        unsafe {
-            asm!("
-                NOP
-            ");
-        }
-    }
 }

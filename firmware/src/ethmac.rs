@@ -1,12 +1,10 @@
 use core::{slice, cmp};
-use cortex_m;
+use cortex_m::{self, asm::delay};
 use tm4c129x;
 use smoltcp::Result;
 use smoltcp::time::Instant;
 use smoltcp::wire::EthernetAddress;
 use smoltcp::phy;
-
-use board;
 
 const EPHY_BMCR: u8 =           0x00; // Ethernet PHY Basic Mode Control
 #[allow(dead_code)]
@@ -43,8 +41,8 @@ const ETH_RX_BUFFER_COUNT: usize =  3;
 const ETH_RX_BUFFER_SIZE: usize =   1536;
 
 fn phy_read(reg_addr: u8) -> u16 {
-    cortex_m::interrupt::free(|cs| {
-        let emac0 = tm4c129x::EMAC0.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let emac0 = unsafe { &*tm4c129x::EMAC0::ptr() };
 
         // Make sure the MII is idle
         while emac0.miiaddr.read().miib().bit() {};
@@ -66,8 +64,8 @@ fn phy_read(reg_addr: u8) -> u16 {
 }
 
 fn phy_write(reg_addr: u8, reg_data: u16) {
-    cortex_m::interrupt::free(|cs| {
-        let emac0 = tm4c129x::EMAC0.borrow(cs);
+    cortex_m::interrupt::free(|_cs| {
+        let emac0 = unsafe { &*tm4c129x::EMAC0::ptr() };
 
         // Make sure the MII is idle
         while emac0.miiaddr.read().miib().bit() {};
@@ -236,8 +234,8 @@ impl TxRing {
         self.desc_buf[self.cur_desc + 0] =
             EMAC_TDES0_OWN | EMAC_TDES0_LS | EMAC_TDES0_FS | EMAC_TDES0_TCH;
 
-        cortex_m::interrupt::free(|cs| {
-            let emac0 = tm4c129x::EMAC0.borrow(cs);
+        cortex_m::interrupt::free(|_cs| {
+            let emac0 = unsafe { &*tm4c129x::EMAC0::ptr() };
             // Clear TU flag to resume processing
             emac0.dmaris.write(|w| w.tu().bit(true));
             // Instruct the DMA to poll the transmit descriptor list
@@ -270,27 +268,27 @@ impl Device {
         self.rx.init();
         self.tx.init();
 
-        cortex_m::interrupt::free(|cs| {
-            let sysctl = tm4c129x::SYSCTL.borrow(cs);
-            let emac0 = tm4c129x::EMAC0.borrow(cs);
+        cortex_m::interrupt::free(|_cs| {
+            let sysctl = &*tm4c129x::SYSCTL::ptr();
+            let emac0 = &*tm4c129x::EMAC0::ptr();
 
             sysctl.rcgcemac.modify(|_, w| w.r0().bit(true)); // Bring up MAC
             sysctl.sremac.modify(|_, w| w.r0().bit(true)); // Activate MAC reset
-            board::delay(16);
+            delay(16);
             sysctl.sremac.modify(|_, w| w.r0().bit(false)); // Dectivate MAC reset
 
             sysctl.rcgcephy.modify(|_, w| w.r0().bit(true)); // Bring up PHY
             sysctl.srephy.modify(|_, w| w.r0().bit(true)); // Activate PHY reset
-            board::delay(16);
+            delay(16);
             sysctl.srephy.modify(|_, w| w.r0().bit(false)); // Dectivate PHY reset
 
             while !sysctl.premac.read().r0().bit() {} // Wait for the MAC to come out of reset
             while !sysctl.prephy.read().r0().bit() {} // Wait for the PHY to come out of reset
-            board::delay(10000);
+            delay(10000);
 
             emac0.dmabusmod.modify(|_, w| w.swr().bit(true)); // Reset MAC DMA
             while emac0.dmabusmod.read().swr().bit() {} // Wait for the MAC DMA to come out of reset
-            board::delay(1000);
+            delay(1000);
 
             emac0.miiaddr.write(|w| w.cr()._100_150()); // Set the MII CSR clock speed.
 
@@ -371,10 +369,10 @@ impl Device {
 
             emac0.flowctl.write(|w| w.bits(0)); // Disable flow control ???
 
-            emac0.txdladdr.write(|w| unsafe {
+            emac0.txdladdr.write(|w| /*unsafe*/ {
                 w.bits((&mut self.tx.desc_buf[0] as *mut u32) as u32)
             });
-            emac0.rxdladdr.write(|w| unsafe {
+            emac0.rxdladdr.write(|w| /*unsafe*/ {
                 w.bits((&mut self.rx.desc_buf[0] as *mut u32) as u32)
             });
 

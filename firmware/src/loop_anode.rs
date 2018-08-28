@@ -1,4 +1,4 @@
-use core::num::Float;
+use libm::F32Ext;
 
 use board;
 use pid;
