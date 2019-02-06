@@ -80,7 +80,7 @@ Building and loading the firmware
 
 ```sh
 cd firmware
-xargo build --release
+cargo build --release
 openocd -f openocd.cfg
 ```
 
