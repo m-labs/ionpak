@@ -9,9 +9,9 @@ walkdir = "1.0"
 [dependencies]
 libm = "0.1.2"
 cortex-m = { version = "0.5", features = ["const-fn"] }
-cortex-m-rt = "0.5"
+cortex-m-rt = "0.6"
 crc = { version = "1.7", default-features = false }
-tm4c129x = { version = "0.7", features = ["rt"] }
+tm4c129x = { version = "0.8", features = ["rt"] }
 
 [dependencies.smoltcp]
 git = "https://github.com/m-labs/smoltcp"

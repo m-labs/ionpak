@@ -1,4 +1,4 @@
-#![feature(const_fn, panic_handler)]
+#![feature(const_fn)]
 #![no_std]
 #![no_main]
 
@@ -104,8 +104,7 @@ macro_rules! create_socket {
     )
 }
 
-entry!(main);
-
+#[entry]
 fn main() -> ! {
     board::init();
     let button_pressed = board::get_button();

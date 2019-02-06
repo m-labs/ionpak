@@ -31,7 +31,7 @@ fn git_describe() {
                     .ok()
                     .and_then(|o| String::from_utf8(o.stdout).ok())
                     .map(|mut s| {
-                        let len = s.trim_right().len();
+                        let len = s.trim_end().len();
                         s.truncate(len);
                         s
                     })
